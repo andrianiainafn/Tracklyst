@@ -1,20 +1,21 @@
+import React from 'react';
+import { StyleSheet } from 'react-native';
+
 import { Fonts } from '@/constants/theme';
 import ParallaxScrollView from '@/src/components/parallax-scroll-view';
 import { ThemedText } from '@/src/components/themed-text';
 import { ThemedView } from '@/src/components/themed-view';
 import { IconSymbol } from '@/src/components/ui/icon-symbol.ios';
-import React from 'react';
-import { StyleSheet } from 'react-native';
 
-export default function HomeScreen() {
+export default function GoalsScreen() {
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
+      headerBackgroundColor={{ light: '#C8E6C9', dark: '#2E5D3E' }}
       headerImage={
         <IconSymbol
           size={310}
           color="#808080"
-          name="chart.bar.fill"
+          name="target"
           style={styles.headerImage}
         />
       }>
@@ -24,10 +25,10 @@ export default function HomeScreen() {
           style={{
             fontFamily: Fonts.rounded,
           }}>
-          Accueil
+          Objectifs
         </ThemedText>
       </ThemedView>
-      <ThemedText>Dashboard et vue d'ensemble de vos finances</ThemedText>
+      <ThemedText>Suivez vos objectifs financiers</ThemedText>
     </ParallaxScrollView>
   );
 }

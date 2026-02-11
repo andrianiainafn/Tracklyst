@@ -6,15 +6,15 @@ import { IconSymbol } from '@/src/components/ui/icon-symbol.ios';
 import React from 'react';
 import { StyleSheet } from 'react-native';
 
-export default function HomeScreen() {
+export default function ProfileScreen() {
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
+      headerBackgroundColor={{ light: '#E1BEE7', dark: '#4A2C5E' }}
       headerImage={
         <IconSymbol
           size={310}
           color="#808080"
-          name="chart.bar.fill"
+          name="person.fill"
           style={styles.headerImage}
         />
       }>
@@ -24,10 +24,10 @@ export default function HomeScreen() {
           style={{
             fontFamily: Fonts.rounded,
           }}>
-          Accueil
+          Profil
         </ThemedText>
       </ThemedView>
-      <ThemedText>Dashboard et vue d'ensemble de vos finances</ThemedText>
+      <ThemedText>Paramètres et informations du compte</ThemedText>
     </ParallaxScrollView>
   );
 }

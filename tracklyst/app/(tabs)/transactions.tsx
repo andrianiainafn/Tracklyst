@@ -6,15 +6,15 @@ import { IconSymbol } from '@/src/components/ui/icon-symbol.ios';
 import React from 'react';
 import { StyleSheet } from 'react-native';
 
-export default function HomeScreen() {
+export default function TransactionsScreen() {
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
+      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
       headerImage={
         <IconSymbol
           size={310}
           color="#808080"
-          name="chart.bar.fill"
+          name="list.bullet"
           style={styles.headerImage}
         />
       }>
@@ -24,10 +24,10 @@ export default function HomeScreen() {
           style={{
             fontFamily: Fonts.rounded,
           }}>
-          Accueil
+          Transactions
         </ThemedText>
       </ThemedView>
-      <ThemedText>Dashboard et vue d'ensemble de vos finances</ThemedText>
+      <ThemedText>Gérez vos revenus et dépenses</ThemedText>
     </ParallaxScrollView>
   );
 }
