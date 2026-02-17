@@ -1,72 +1,136 @@
-import { ThemedText } from '@/src/components/themed-text';
-import { ThemedView } from '@/src/components/themed-view';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ThemedText } from "@/src/components/themed-text";
+import { ThemedView } from "@/src/components/themed-view";
+import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import React, { useRef, useState } from "react";
+import { Animated, StyleSheet, TouchableOpacity, View } from "react-native";
 
+type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
 
-const onboardingData = [
+interface OnboardingSlide {
+  id: number;
+  title: string;
+  description: string;
+  color: string;
+  iconBg: string;
+  icon: FeatherIconName;
+}
+
+const SLIDES: OnboardingSlide[] = [
   {
     id: 1,
-    title: 'Gérez vos finances',
-    description: 'Suivez vos revenus et dépenses en temps réel. Gardez le contrôle total sur votre argent.',
-    color: '#10B981',
+    title: "Gérez vos finances",
+    description:
+      "Suivez vos revenus et dépenses en temps réel. Gardez le contrôle total sur votre argent.",
+    color: "#10B981",
+    iconBg: "#D1FAE5",
+    icon: "trending-up",
   },
   {
     id: 2,
-    title: 'Organisez vos transactions',
-    description: 'Catégorisez automatiquement vos dépenses et revenus. Visualisez où va votre argent.',
-    color: '#3B82F6',
+    title: "Organisez vos transactions",
+    description:
+      "Catégorisez automatiquement vos dépenses et revenus. Visualisez où va votre argent.",
+    color: "#3B82F6",
+    iconBg: "#DBEAFE",
+    icon: "layers",
   },
   {
     id: 3,
-    title: 'Atteignez vos objectifs',
-    description: 'Définissez des objectifs financiers et suivez vos progrès. Économisez pour ce qui compte vraiment.',
-    color: '#8B5CF6',
+    title: "Atteignez vos objectifs",
+    description:
+      "Définissez des objectifs financiers et suivez vos progrès. Économisez pour ce qui compte vraiment.",
+    color: "#8B5CF6",
+    iconBg: "#EDE9FE",
+    icon: "target",
   },
   {
     id: 4,
-    title: 'Budgets partagés',
-    description: 'Créez des budgets en groupe avec famille ou amis. Gérez vos finances ensemble en toute transparence.',
-    color: '#EC4899',
+    title: "Budgets partagés",
+    description:
+      "Créez des budgets en groupe avec famille ou amis. Gérez vos finances ensemble en toute transparence.",
+    color: "#EC4899",
+    iconBg: "#FCE7F3",
+    icon: "users",
   },
 ];
 
 export default function SplashScreen() {
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const currentSlide = SLIDES[currentIndex];
+  const isLast = currentIndex === SLIDES.length - 1;
+
+  const animatePress = (callback: () => void) => {
+    Animated.sequence([
+      Animated.timing(scaleAnim, {
+        toValue: 0.96,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+    ]).start(callback);
+  };
 
   const handleNext = () => {
-    if (currentIndex < onboardingData.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    } else {
-      router.replace('/login');
-    }
+    animatePress(() => {
+      if (!isLast) {
+        setCurrentIndex((prev) => prev + 1);
+      } else {
+        router.replace("/login");
+      }
+    });
   };
 
   const handleSkip = () => {
-    router.replace('/login');
+    router.replace("/login");
   };
-
-  const currentSlide = onboardingData[currentIndex];
 
   return (
     <ThemedView style={styles.container}>
-      {/* Header avec Skip */}
+      <StatusBar style="dark" />
+
+      {/* Skip */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleSkip}>
+        <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
           <ThemedText style={styles.skipText}>Passer</ThemedText>
+          <Feather name="arrow-right" size={14} color="#9CA3AF" />
         </TouchableOpacity>
       </View>
 
-      {/* Contenu principal */}
+      {/* Main Content */}
       <View style={styles.content}>
-        {/* Illustration colorée */}
-        <View style={[styles.illustration, { backgroundColor: currentSlide.color }]}>
-          <ThemedText style={styles.emoji}>💰</ThemedText>
+        {/* Icon illustration */}
+        <View style={styles.iconWrapper}>
+          <View
+            style={[
+              styles.iconRing,
+              { borderColor: currentSlide.color + "22" },
+            ]}
+          >
+            <View
+              style={[
+                styles.iconCircle,
+                { backgroundColor: currentSlide.iconBg },
+              ]}
+            >
+              <Feather
+                name={currentSlide.icon}
+                size={40}
+                color={currentSlide.color}
+              />
+            </View>
+          </View>
         </View>
 
-        {/* Titre et description */}
+        {/* Text */}
         <View style={styles.textContent}>
           <ThemedText type="title" style={styles.title}>
             {currentSlide.title}
@@ -77,30 +141,41 @@ export default function SplashScreen() {
         </View>
       </View>
 
-      {/* Footer avec pagination et bouton */}
+      {/* Footer */}
       <View style={styles.footer}>
-        {/* Dots de pagination */}
+        {/* Step indicator */}
         <View style={styles.pagination}>
-          {onboardingData.map((_, index) => (
+          {SLIDES.map((_, index) => (
             <View
               key={index}
               style={[
                 styles.dot,
-                index === currentIndex && styles.activeDot,
-                index === currentIndex && { backgroundColor: currentSlide.color },
+                index === currentIndex
+                  ? [styles.dotActive, { backgroundColor: currentSlide.color }]
+                  : styles.dotInactive,
               ]}
             />
           ))}
         </View>
 
-        {/* Bouton Suivant/Commencer */}
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: currentSlide.color }]}
-          onPress={handleNext}>
-          <ThemedText style={styles.buttonText}>
-            {currentIndex === onboardingData.length - 1 ? 'Commencer' : 'Suivant'}
-          </ThemedText>
-        </TouchableOpacity>
+        {/* CTA Button */}
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: currentSlide.color }]}
+            onPress={handleNext}
+            activeOpacity={0.9}
+          >
+            <ThemedText style={styles.buttonText}>
+              {isLast ? "Commencer" : "Suivant"}
+            </ThemedText>
+            <Feather
+              name={isLast ? "check" : "arrow-right"}
+              size={18}
+              color="#fff"
+              style={{ marginLeft: 8 }}
+            />
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </ThemedView>
   );
@@ -109,76 +184,110 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#F7F8FA",
   },
+
+  // ── Header ──
   header: {
     paddingTop: 60,
     paddingHorizontal: 24,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
+  },
+  skipButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 2,
   },
   skipText: {
-    fontSize: 16,
-    opacity: 0.6,
+    fontSize: 14,
+    color: "#9CA3AF",
+    fontWeight: "500",
   },
+
+  // ── Content ──
   content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
   },
-  illustration: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 48,
+  iconWrapper: {
+    marginBottom: 52,
   },
-  emoji: {
-    fontSize: 80,
+  iconRing: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: "center",
+    justifyContent: "center",
   },
   textContent: {
-    alignItems: 'center',
-    gap: 16,
-    paddingHorizontal: 24,
+    alignItems: "center",
+    gap: 14,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontSize: 28,
+    fontWeight: "700",
+    textAlign: "center",
+    letterSpacing: -0.4,
+    color: "#111827",
   },
   description: {
-    fontSize: 16,
-    textAlign: 'center',
-    opacity: 0.7,
+    fontSize: 15,
+    textAlign: "center",
+    color: "#6B7280",
     lineHeight: 24,
+    maxWidth: 300,
   },
+
+  // ── Footer ──
   footer: {
     paddingHorizontal: 24,
-    paddingBottom: 48,
-    gap: 24,
+    paddingBottom: 52,
+    gap: 28,
   },
   pagination: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#D1D5DB',
+    height: 6,
+    borderRadius: 3,
   },
-  activeDot: {
-    width: 24,
+  dotActive: {
+    width: 22,
+  },
+  dotInactive: {
+    width: 6,
+    backgroundColor: "#D1D5DB",
   },
   button: {
-    padding: 18,
-    borderRadius: 12,
-    alignItems: 'center',
+    height: 54,
+    borderRadius: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    elevation: 5,
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.1,
   },
 });
