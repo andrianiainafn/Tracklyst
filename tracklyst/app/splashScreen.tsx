@@ -3,7 +3,7 @@ import { ThemedView } from "@/src/components/themed-view";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Animated, StyleSheet, TouchableOpacity, View } from "react-native";
 
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
@@ -59,10 +59,18 @@ const SLIDES: OnboardingSlide[] = [
 export default function SplashScreen() {
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  const currentSlide = SLIDES[currentIndex];
-  const isLast = currentIndex === SLIDES.length - 1;
+  // ✅ Wait for Root Layout to mount before any navigation
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // ✅ Safe access — clamp index to valid range
+  const safeIndex = Math.min(Math.max(currentIndex, 0), SLIDES.length - 1);
+  const currentSlide = SLIDES[safeIndex];
+  const isLast = safeIndex === SLIDES.length - 1;
 
   const animatePress = (callback: () => void) => {
     Animated.sequence([
@@ -76,21 +84,26 @@ export default function SplashScreen() {
         duration: 80,
         useNativeDriver: true,
       }),
-    ]).start(callback);
+    ]).start(() => callback());
+  };
+
+  const navigate = (path: string) => {
+    if (!isMounted) return;
+    router.replace(path as any);
   };
 
   const handleNext = () => {
     animatePress(() => {
       if (!isLast) {
-        setCurrentIndex((prev) => prev + 1);
+        setCurrentIndex((prev) => Math.min(prev + 1, SLIDES.length - 1));
       } else {
-        router.replace("/login");
+        navigate("/(auth)/login");
       }
     });
   };
 
   const handleSkip = () => {
-    router.replace("/login");
+    navigate("/(auth)/login");
   };
 
   return (
@@ -150,7 +163,7 @@ export default function SplashScreen() {
               key={index}
               style={[
                 styles.dot,
-                index === currentIndex
+                index === safeIndex
                   ? [styles.dotActive, { backgroundColor: currentSlide.color }]
                   : styles.dotInactive,
               ]}
@@ -187,7 +200,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#F7F8FA",
   },
 
-  // ── Header ──
   header: {
     paddingTop: 60,
     paddingHorizontal: 24,
@@ -206,7 +218,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  // ── Content ──
   content: {
     flex: 1,
     justifyContent: "center",
@@ -250,7 +261,6 @@ const styles = StyleSheet.create({
     maxWidth: 300,
   },
 
-  // ── Footer ──
   footer: {
     paddingHorizontal: 24,
     paddingBottom: 52,

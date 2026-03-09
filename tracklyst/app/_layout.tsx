@@ -1,7 +1,6 @@
 import { useAuth } from "@/src/features/auth/hooks/useAuth";
 import { authService } from "@/src/features/auth/services/authService";
-import { useAuthStore } from "../src/features/auth/store/authStore";
-
+import { useAuthStore } from "@/src/features/auth/store/authStore";
 import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import {
   DarkTheme,
@@ -30,16 +29,16 @@ function AuthGuard() {
     const inAuthGroup = segments[0] === "(auth)";
 
     if (!isAuthenticated && !inAuthGroup) {
-      // Not signed in — redirect to login
-      router.replace("/login");
+      // ✅ Chemin complet avec le groupe (auth)
+      router.replace("/(auth)/login");
     } else if (isAuthenticated && inAuthGroup) {
-      // Signed in — redirect away from auth screens
       router.replace("/(tabs)");
     }
   }, [isAuthenticated, isInitialized, segments]);
 
   return null;
 }
+
 function DeepLinkHandler() {
   const { setSession } = useAuthStore();
 
@@ -55,18 +54,13 @@ function DeepLinkHandler() {
     }
   };
 
-  // Handle app opened via deep link
   useEffect(() => {
-    // Initial URL (app was opened from a link)
     Linking.getInitialURL().then((url) => {
       if (url) handleUrl(url);
     });
-
-    // Subsequent deep links while app is open
     const subscription = Linking.addEventListener("url", ({ url }) => {
       handleUrl(url);
     });
-
     return () => subscription.remove();
   }, []);
 
@@ -81,15 +75,13 @@ export default function RootLayout() {
       <AuthGuard />
       <DeepLinkHandler />
       <Stack
-        screenOptions={{
-          headerShown: false,
-        }}
+        screenOptions={{ headerShown: false }}
         initialRouteName="splashScreen"
       >
         <Stack.Screen name="splashScreen" />
-        <Stack.Screen name="login" />
-        <Stack.Screen name="signup" />
+        <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(modal)" />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
