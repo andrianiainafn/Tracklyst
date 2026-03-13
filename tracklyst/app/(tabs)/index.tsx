@@ -1,11 +1,11 @@
 import { IconSymbol } from "@/src/components/ui/icon-symbol.ios";
 import { useActiveBudget } from "@/src/features/budgets/hooks/useActiveBudget";
 import { useBudgets } from "@/src/features/budgets/hooks/useBudgets";
+import { budgetService } from "@/src/features/budgets/services/budgetService";
 import type { Budget } from "@/src/features/budgets/types/budget.types";
-import { useTransactionStore } from "@/src/features/transaction/store/transactionStore";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useMemo, useRef } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -64,35 +64,36 @@ type BudgetWithStats = Budget & {
   transactionsCount?: number;
 };
 
+// ─── Stats par budget (un seul budget = une seule entrée) ─────────────────────
+type BudgetStats = {
+  totalIncome: number;
+  totalExpense: number;
+  available_balance: number;
+};
+
 // ─── Budget Card ──────────────────────────────────────────────────────────────
 function BudgetCard({
   budget,
   index,
   onPress,
   isActive,
-  activeBalance,
-  overrideStats,
+  stats,
 }: {
   budget: BudgetWithStats;
   index: number;
   onPress: () => void;
   isActive: boolean;
-  activeBalance?: number;
-  overrideStats?: { income: number; expense: number };
+  stats: BudgetStats | null;
 }) {
   const g = BUDGET_GRADIENTS[index % BUDGET_GRADIENTS.length];
 
   const initialAmount = Number(budget.initial_amount ?? 0);
-  const totalIncome =
-    overrideStats?.income ?? Number(budget.totalIncome ?? 0);
-  const totalExpense =
-    overrideStats?.expense ?? Number(budget.totalExpense ?? 0);
+  const totalIncome = stats?.totalIncome ?? 0;
+  const totalExpense = stats?.totalExpense ?? 0;
   const goalsCount = budget.goalsCount ?? 0;
 
-  // ✅ Solde = montant initial + revenus - dépenses
-  const computedBalance = initialAmount + totalIncome - totalExpense;
-  const balance =
-    typeof activeBalance === "number" && isActive ? activeBalance : computedBalance;
+  // ✅ Chaque carte affiche UNIQUEMENT son propre solde (jamais celui d'un autre budget)
+  const balance = stats?.available_balance ?? 0;
 
   // Barre de progression : dépenses / (initial + revenus)
   const totalAvailable = initialAmount + totalIncome;
@@ -289,40 +290,67 @@ export default function HomeScreen() {
 
   const { budgets, isLoading, error, refresh } = useBudgets();
   const { activeBudget, balance, switchBudget } = useActiveBudget();
-  const { transactions } = useTransactionStore();
 
-  // ── Aggregate totals ───────────────────────────────────────────────────────
-  // On se base sur les transactions réellement chargées (budget actif)
-  const { totalIncome, totalExpense, totalTx } = useMemo(() => {
-    let income = 0;
-    let expense = 0;
-    for (const t of transactions) {
-      if (t.type === "income") income += t.amount;
-      else expense += t.amount;
+  // ── Cache des stats par budget : chaque carte lit UNIQUEMENT sa propre entrée ──
+  const [budgetStatsMap, setBudgetStatsMap] = useState<
+    Record<string, BudgetStats>
+  >({});
+
+  const loadStatsForAllBudgets = useCallback(async () => {
+    if (budgets.length === 0) {
+      setBudgetStatsMap({});
+      return;
     }
-    return { totalIncome: income, totalExpense: expense, totalTx: transactions.length };
-  }, [transactions]);
+    try {
+      const results = await Promise.all(
+        budgets.map(async (b) => {
+          try {
+            const s = await budgetService.getBudgetStats(b.id);
+            return [b.id, s] as const;
+          } catch {
+            const bal = await budgetService.getBalance(b.id);
+            return [
+              b.id,
+              {
+                totalIncome: 0,
+                totalExpense: 0,
+                available_balance: bal.available_balance,
+              },
+            ] as const;
+          }
+        })
+      );
+      setBudgetStatsMap(Object.fromEntries(results));
+    } catch {
+      setBudgetStatsMap({});
+    }
+  }, [budgets]);
 
-  // Solde affiché : après un versement dans un objectif, c'est le "disponible" qui baisse
-  const totalBalance = balance?.available_balance ?? totalIncome - totalExpense;
+  useEffect(() => {
+    loadStatsForAllBudgets();
+  }, [loadStatsForAllBudgets]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (budgets.length > 0) loadStatsForAllBudgets();
+    }, [budgets.length, loadStatsForAllBudgets])
+  );
+
+  // Stats du budget actif (pour le hero + pills)
+  const activeStats = activeBudget?.id
+    ? budgetStatsMap[activeBudget.id]
+    : null;
+
+  const totalBalance = activeStats?.available_balance ?? balance?.available_balance ?? 0;
+  const totalIncome = activeStats?.totalIncome ?? 0;
+  const totalExpense = activeStats?.totalExpense ?? 0;
+  const totalTx = 0; // non utilisé par budget, on garde 0 ou on pourrait sommer
 
   // Objectifs : on garde le compteur issu des budgets (agrégé par budget)
   const totalGoals = budgets.reduce(
     (acc, b) => acc + ((b as BudgetWithStats).goalsCount ?? 0),
     0,
   );
-
-  const activeTxStats = useMemo(() => {
-    if (!activeBudget?.id) return null;
-    let income = 0;
-    let expense = 0;
-    for (const t of transactions) {
-      if (t.budget_id !== activeBudget.id) continue;
-      if (t.type === "income") income += t.amount;
-      else expense += t.amount;
-    }
-    return { income, expense };
-  }, [transactions, activeBudget?.id]);
 
   const headerHeight = scrollY.interpolate({
     inputRange: [0, 120],
@@ -394,7 +422,10 @@ export default function HomeScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isLoading && budgets.length > 0}
-            onRefresh={refresh}
+            onRefresh={async () => {
+              await refresh();
+              await loadStatsForAllBudgets();
+            }}
             tintColor={isDark ? "#34D399" : "#10B981"}
           />
         }
@@ -478,10 +509,7 @@ export default function HomeScreen() {
               index={i}
               onPress={() => handleBudgetPress(budget)}
               isActive={activeBudget?.id === budget.id}
-              activeBalance={balance?.available_balance}
-              overrideStats={
-                activeBudget?.id === budget.id ? activeTxStats ?? undefined : undefined
-              }
+              stats={budgetStatsMap[budget.id] ?? null}
             />
           ))}
 

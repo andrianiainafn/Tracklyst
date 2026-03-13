@@ -5,6 +5,7 @@ export interface Budget {
   owner_type: 'user' | 'group';
   owner_id: string;
   currency: string;
+  initial_amount?: number;
   created_at: string;
   updated_at: string;
 }
@@ -15,6 +16,7 @@ export interface CreateBudgetDTO {
   owner_type: 'user' | 'group';
   owner_id: string;
   currency?: string;
+  initial_amount?: number;
 }
 
 export type UpdateBudgetDTO = Partial<Pick<Budget, 'name' | 'currency'>>;

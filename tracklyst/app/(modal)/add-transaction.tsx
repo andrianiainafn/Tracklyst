@@ -1,11 +1,16 @@
 import { IconSymbol } from "@/src/components/ui/icon-symbol.ios";
 import { useBudgets } from "@/src/features/budgets/hooks/useBudgets";
+import { budgetService } from "@/src/features/budgets/services/budgetService";
+import { categoryService } from "@/src/features/categories/services/categoryService";
+import { useCategoryStore } from "@/src/features/categories/store/categoryStore";
+import type { BudgetBalance } from "@/src/features/budgets/types/budget.types";
 import { useBudgetStore } from "@/src/features/budgets/store/budgetStore";
 import type { Budget } from "@/src/features/budgets/types/budget.types";
 import { useCategories } from "@/src/features/categories/hooks/useCategories";
 import { useAddTransaction } from "@/src/features/transaction/hooks/useAddTransaction";
 import { formatCurrency } from "@/src/utils/currency";
 import { todayISO } from "@/src/utils/date";
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { Stack, useRouter } from "expo-router";
 import React, {
   useCallback,
@@ -28,6 +33,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TxType = "expense" | "income";
@@ -101,11 +107,7 @@ function Numpad({
           ]}
         >
           {key === "⌫" ? (
-            <IconSymbol
-              name="delete.backward.fill"
-              size={18}
-              color={isDark ? "#F87171" : "#EF4444"}
-            />
+            <Ionicons name="close-sharp" size={18} color={isDark ? "#F87171" : "#EF4444"} />
           ) : (
             <Text style={[styles.numKeyText, isDark && styles.numKeyTextDark]}>
               {key}
@@ -174,7 +176,7 @@ function BudgetSelector({
                 {b.name}
               </Text>
               {isSelected && (
-                <IconSymbol name="checkmark" size={11} color="#fff" />
+                <Ionicons name="checkmark" size={24} color="#fff" />
               )}
             </Pressable>
           );
@@ -218,8 +220,13 @@ export default function AddTransaction() {
   const [type, setType] = useState<TxType>("expense");
   const [amountRaw, setAmountRaw] = useState("0");
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState("");
   const [description, setDescription] = useState("");
   const [date] = useState(todayISO());
+  const [selectedBalance, setSelectedBalance] = useState<BudgetBalance | null>(
+    null,
+  );
+  const [isBalanceLoading, setIsBalanceLoading] = useState(false);
 
   const accentColor = type === "income" ? "#10B981" : "#EF4444";
   const accentLight = type === "income" ? "#ECFDF5" : "#FEF2F2";
@@ -231,8 +238,20 @@ export default function AddTransaction() {
   );
 
   const amount = parseFloat(amountRaw) || 0;
+  const exceedsBalance =
+    type === "expense" &&
+    selectedBalance != null &&
+    amount > selectedBalance.available_balance;
+
   const canSubmit =
-    amount > 0 && !!categoryId && !!selectedBudget && !isLoading;
+    amount > 0 &&
+    !!categoryId &&
+    !!selectedBudget &&
+    !isLoading &&
+    !isBalanceLoading &&
+    !exceedsBalance;
+
+  const { addCategory } = useCategoryStore();
 
   const handleTypeChange = (v: TxType) => {
     setType(v);
@@ -245,8 +264,42 @@ export default function AddTransaction() {
     setCategoryId(null); // reset catégorie car elle dépend du budget
   };
 
+  // Charger le solde du budget sélectionné pour empêcher les dépenses au‑delà du solde
+  useEffect(() => {
+    const loadBalance = async () => {
+      if (!selectedBudget) {
+        setSelectedBalance(null);
+        return;
+      }
+      try {
+        setIsBalanceLoading(true);
+        const balance = await budgetService.getBalance(selectedBudget.id);
+        setSelectedBalance(balance);
+      } catch {
+        setSelectedBalance(null);
+      } finally {
+        setIsBalanceLoading(false);
+      }
+    };
+
+    loadBalance();
+  }, [selectedBudget?.id]);
+
   const handleSubmit = useCallback(async () => {
     if (!canSubmit || !categoryId || !selectedBudget) return;
+
+    if (
+      type === "expense" &&
+      selectedBalance &&
+      amount > selectedBalance.available_balance
+    ) {
+      Alert.alert(
+        "Solde insuffisant",
+        "Le montant de cette dépense dépasse le solde disponible du budget.",
+        [{ text: "OK" }],
+      );
+      return;
+    }
     try {
       await addTransaction({
         type,
@@ -432,7 +485,7 @@ export default function AddTransaction() {
               </View>
             ) : filteredCats.length === 0 ? (
               <View style={styles.catsEmpty}>
-                <IconSymbol name="tray.fill" size={24} color="#94A3B8" />
+                <Ionicons name="file-tray-outline" size={24} color="#94A3B8" />
                 <Text style={[styles.emptyText, isDark && styles.textMuted]}>
                   {!selectedBudget
                     ? "Sélectionnez d'abord un budget"
@@ -472,8 +525,9 @@ export default function AddTransaction() {
                           },
                         ]}
                       >
-                        <IconSymbol
-                          name={icon}
+                        <Ionicons
+                          // name={icon}
+                          name="file-tray-full-outline"
                           size={20}
                           color={isSelected ? "#fff" : color}
                         />
@@ -492,12 +546,70 @@ export default function AddTransaction() {
                         <View
                           style={[styles.catCheck, { backgroundColor: color }]}
                         >
-                          <IconSymbol name="checkmark" size={8} color="#fff" />
+                          <Ionicons name="checkmark" size={24} color="#fff" />
                         </View>
                       )}
                     </Pressable>
                   );
                 })}
+              </View>
+            )}
+
+            {/* Petit espace pour créer une nouvelle catégorie */}
+            {selectedBudget && (
+              <View style={styles.newCatRow}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    styles.newCatInput,
+                    isDark && styles.inputDark,
+                  ]}
+                  placeholder={
+                    type === "income"
+                      ? "Nouvelle catégorie de revenu"
+                      : "Nouvelle catégorie de dépense"
+                  }
+                  placeholderTextColor="#94A3B8"
+                  value={newCategoryName}
+                  onChangeText={setNewCategoryName}
+                />
+                <Pressable
+                  onPress={async () => {
+                    const name = newCategoryName.trim();
+                    if (!name) return;
+                    try {
+                      const created = await categoryService.createCategory({
+                        budget_id: selectedBudget.id,
+                        name,
+                        type,
+                      });
+                      addCategory(created);
+                      setNewCategoryName("");
+                      setCategoryId(created.id);
+                    } catch (e: any) {
+                      Alert.alert(
+                        "Erreur",
+                        e?.message ?? "Impossible de créer la catégorie.",
+                      );
+                    }
+                  }}
+                  disabled={!newCategoryName.trim()}
+                  style={({ pressed }) => [
+                    styles.newCatBtn,
+                    {
+                      backgroundColor: newCategoryName.trim()
+                        ? accentColor
+                        : "#CBD5E1",
+                    },
+                    pressed &&
+                      newCategoryName.trim() && {
+                        opacity: 0.85,
+                        transform: [{ scale: 0.97 }],
+                      },
+                  ]}
+                >
+                  <FontAwesome6 name="add" size={24} color="black" />
+                </Pressable>
               </View>
             )}
           </View>
@@ -740,6 +852,24 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // New category inline creator
+  newCatRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 10,
+  },
+  newCatInput: {
+    flex: 1,
+  },
+  newCatBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },

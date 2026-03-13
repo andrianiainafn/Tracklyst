@@ -38,12 +38,17 @@ export const useBudgetStore = create<BudgetState>()(
         setActiveBudget: (budget) => set({ activeBudget: budget }),
 
         addBudget: (budget) =>
-          set((state) => ({
-            budgets: [...state.budgets, budget],
-            // Auto-select if it's the first one
-            activeBudget:
-              state.budgets.length === 0 ? budget : state.activeBudget,
-          })),
+          set((state) => {
+            const normalized = {
+              ...budget,
+              initial_amount: Number(budget.initial_amount ?? 0),
+            };
+            return {
+              budgets: [...state.budgets, normalized],
+              activeBudget:
+                state.budgets.length === 0 ? normalized : state.activeBudget,
+            };
+          }),
 
         updateBudget: (id, data) =>
           set((state) => ({

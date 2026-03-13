@@ -14,11 +14,14 @@ export const budgetService = {
   async getBudgets(): Promise<Budget[]> {
     const { data, error } = await supabase
       .from("budgets")
-      .select("*")
+      .select("id, name, owner_type, owner_id, currency, initial_amount, created_at, updated_at")
       .order("created_at", { ascending: true });
 
     if (error) throw error;
-    return data as Budget[];
+    return (data ?? []).map((row) => ({
+      ...row,
+      initial_amount: Number(row.initial_amount ?? 0),
+    })) as Budget[];
   },
 
   /**
@@ -27,12 +30,15 @@ export const budgetService = {
   async getBudgetById(id: string): Promise<Budget> {
     const { data, error } = await supabase
       .from("budgets")
-      .select("*")
+      .select("id, name, owner_type, owner_id, currency, initial_amount, created_at, updated_at")
       .eq("id", id)
       .single();
 
     if (error) throw error;
-    return data as Budget;
+    return {
+      ...data,
+      initial_amount: Number(data?.initial_amount ?? 0),
+    } as Budget;
   },
 
   /**
@@ -71,6 +77,34 @@ export const budgetService = {
     const { error } = await supabase.from("budgets").delete().eq("id", id);
 
     if (error) throw error;
+  },
+
+  /**
+   * Fetch stats for a budget (income, expense, balance) - pour cartes et barre de progression.
+   * Nécessite la migration 00002_get_budget_stats.sql.
+   */
+  async getBudgetStats(
+    budgetId: string,
+    date?: string
+  ): Promise<{
+    totalIncome: number;
+    totalExpense: number;
+    available_balance: number;
+    locked_in_goals: number;
+  }> {
+    const { data, error } = await supabase.rpc("get_budget_stats", {
+      p_budget_id: budgetId,
+      p_date: date ?? new Date().toISOString().split("T")[0],
+    });
+
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    return {
+      totalIncome: Number(row?.total_income ?? 0),
+      totalExpense: Number(row?.total_expense ?? 0),
+      available_balance: Number(row?.available_balance ?? 0),
+      locked_in_goals: Number(row?.locked_in_goals ?? 0),
+    };
   },
 
   /**
