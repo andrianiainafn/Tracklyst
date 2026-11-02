@@ -1,4 +1,8 @@
+import { Colors, Radius, Shadow } from "@/constants/theme";
 import { IconSymbol } from "@/src/components/ui/icon-symbol.ios";
+import { Card } from "@/src/components/ui/Card";
+import { EmptyState } from "@/src/components/ui/EmptyState";
+import { ScreenHeader } from "@/src/components/ui/ScreenHeader";
 import { useActiveBudget } from "@/src/features/budgets/hooks/useActiveBudget";
 import { useGoals } from "@/src/features/goals/hooks/useGoals";
 import { formatCurrency } from "@/src/utils/currency";
@@ -19,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function GoalsScreen() {
   const isDark = useColorScheme() === "dark";
+  const c = isDark ? Colors.dark : Colors.light;
   const { top, bottom } = useSafeAreaInsets();
   const router = useRouter();
 
@@ -42,69 +47,52 @@ export default function GoalsScreen() {
     <View
       style={[
         styles.screen,
-        { paddingTop: top, paddingBottom: bottom + 12 },
-        isDark && styles.screenDark,
+        { paddingTop: top, paddingBottom: bottom + 12, backgroundColor: c.bg },
       ]}
     >
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
-      {/* Header */}
-      <View style={[styles.header, isDark && styles.headerDark]}>
-        <View style={styles.headerIconWrap}>
-          <IconSymbol
-            name="target"
-            size={26}
-            color={isDark ? "#BBF7D0" : "#14532D"}
-          />
-        </View>
-        <View style={styles.headerTextWrap}>
-          <Text style={[styles.headerTitle, isDark && styles.textLight]}>
-            Objectifs
-          </Text>
-          <Text style={[styles.headerSub, isDark && styles.textMuted]}>
-            Épargnez pour vos projets importants
-          </Text>
-        </View>
-      </View>
+      <ScreenHeader
+        icon="flag-outline"
+        title="Objectifs"
+        subtitle="Épargnez pour vos projets importants"
+      />
 
       {/* Overview */}
       <View style={styles.overviewRow}>
-        <View style={[styles.overviewCard, isDark && styles.cardDark]}>
-          <Text style={[styles.overviewLabel, isDark && styles.textMuted]}>
+        <Card style={styles.overviewCard} padding={12}>
+          <Text style={[styles.overviewLabel, { color: c.textSubtle }]}>
             Montant bloqué
           </Text>
-          <Text style={[styles.overviewValue, isDark && styles.textLight]}>
-            {formatCurrency(totals.locked)}
+          <Text style={[styles.overviewValue, { color: c.text }]}>
+            {formatCurrency(totals.locked, activeBudget?.currency)}
           </Text>
-          <Text style={[styles.overviewHint, isDark && styles.textMuted]}>
-            Sur {formatCurrency(totals.target)}
+          <Text style={[styles.overviewHint, { color: c.textMuted }]}>
+            Sur {formatCurrency(totals.target, activeBudget?.currency)}
           </Text>
-        </View>
-        <View style={[styles.overviewCard, isDark && styles.cardDark]}>
-          <Text style={[styles.overviewLabel, isDark && styles.textMuted]}>
+        </Card>
+        <Card style={styles.overviewCard} padding={12}>
+          <Text style={[styles.overviewLabel, { color: c.textSubtle }]}>
             Objectifs
           </Text>
-          <Text style={[styles.overviewValue, isDark && styles.textLight]}>
+          <Text style={[styles.overviewValue, { color: c.text }]}>
             {goals.length}
           </Text>
-          <Text style={[styles.overviewHint, isDark && styles.textMuted]}>
+          <Text style={[styles.overviewHint, { color: c.textMuted }]}>
             {totals.completed} terminés
           </Text>
-        </View>
+        </Card>
       </View>
 
       {/* Balance info */}
       {activeBudget && (
-        <View style={[styles.balanceChip, isDark && styles.balanceChipDark]}>
-          <IconSymbol
-            name="wallet.pass.fill"
-            size={14}
-            color={isDark ? "#BBF7D0" : "#0D4F3C"}
-          />
-          <Text style={[styles.balanceChipText, isDark && styles.textLight]}>
+        <View style={[styles.balanceChip, { backgroundColor: c.tintMuted }]}>
+          <IconSymbol name="wallet.pass.fill" size={14} color={c.tint} />
+          <Text style={[styles.balanceChipText, { color: isDark ? c.tint : "#047857" }]}>
             Budget actif :{" "}
             <Text style={{ fontWeight: "700" }}>{activeBudget.name}</Text> ·{" "}
-            {formatCurrency(balance?.available_balance ?? 0)} dispo
+            {formatCurrency(balance?.available_balance ?? 0, activeBudget?.currency)}{" "}
+            dispo
           </Text>
         </View>
       )}
@@ -117,41 +105,25 @@ export default function GoalsScreen() {
       >
         {isLoading && goals.length === 0 && (
           <View style={styles.loadingWrap}>
-            <ActivityIndicator size="small" color="#10B981" />
+            <ActivityIndicator size="small" color={c.tint} />
           </View>
         )}
 
         {error && (
-          <View style={styles.errorBox}>
-            <IconSymbol
-              name="exclamationmark.triangle.fill"
-              size={14}
-              color="#B45309"
-            />
-            <Text style={styles.errorText}>{error}</Text>
+          <View style={[styles.errorBox, { backgroundColor: c.dangerMuted }]}>
+            <IconSymbol name="exclamationmark.triangle.fill" size={14} color={c.danger} />
+            <Text style={[styles.errorText, { color: c.danger }]}>{error}</Text>
           </View>
         )}
 
         {!isLoading && goals.length === 0 && !error && (
-          <View style={styles.empty}>
-            <IconSymbol
-              name="target"
-              size={40}
-              color={isDark ? "#4B5563" : "#CBD5E1"}
-            />
-            <Text style={[styles.emptyTitle, isDark && styles.textLight]}>
-              Aucun objectif
-            </Text>
-            <Text style={[styles.emptySub, isDark && styles.textMuted]}>
-              Créez un objectif pour mettre de côté une partie de votre budget.
-            </Text>
-            <Pressable
-              style={styles.emptyBtn}
-              onPress={() => router.push("/(modal)/add-goal")}
-            >
-              <Text style={styles.emptyBtnText}>Créer un objectif</Text>
-            </Pressable>
-          </View>
+          <EmptyState
+            icon="flag-outline"
+            title="Aucun objectif"
+            subtitle="Créez un objectif pour mettre de côté une partie de votre budget."
+            actionLabel="Créer un objectif"
+            onAction={() => router.push("/(modal)/add-goal")}
+          />
         )}
 
         {goals.map((g) => {
@@ -160,7 +132,7 @@ export default function GoalsScreen() {
               ? Math.min(g.current_amount / g.target_amount, 1)
               : 0;
           const pct = Math.round(ratio * 100);
-          const color = g.color ?? "#10B981";
+          const color = g.color ?? c.tint;
           const deadlineLabel = g.deadline
             ? formatDate(g.deadline, { relative: true })
             : "Sans échéance";
@@ -176,41 +148,27 @@ export default function GoalsScreen() {
               }
               style={({ pressed }) => [
                 styles.goalCard,
-                isDark && styles.cardDark,
+                { backgroundColor: c.surface, borderColor: c.border },
                 pressed && styles.goalCardPressed,
               ]}
             >
               <View style={styles.goalHeader}>
-                <View
-                  style={[
-                    styles.goalIcon,
-                    { backgroundColor: color + "22" as any },
-                  ]}
-                >
-                  <IconSymbol
-                    name="target"
-                    size={18}
-                    color={color}
-                  />
+                <View style={[styles.goalIcon, { backgroundColor: color + "22" as any }]}>
+                  <IconSymbol name="target" size={18} color={color} />
                 </View>
                 <View style={styles.goalTitleWrap}>
-                  <Text
-                    style={[styles.goalTitle, isDark && styles.textLight]}
-                    numberOfLines={1}
-                  >
+                  <Text style={[styles.goalTitle, { color: c.text }]} numberOfLines={1}>
                     {g.name}
                   </Text>
-                  <Text style={[styles.goalSubtitle, isDark && styles.textMuted]}>
+                  <Text style={[styles.goalSubtitle, { color: c.textSubtle }]}>
                     {deadlineLabel}
                   </Text>
                 </View>
-                <Text style={[styles.goalStatus, isDark && styles.textMuted]}>
-                  {pct}%
-                </Text>
+                <Text style={[styles.goalStatus, { color: c.textMuted }]}>{pct}%</Text>
               </View>
 
               <View style={styles.goalProgressBar}>
-                <View style={styles.goalProgressTrack}>
+                <View style={[styles.goalProgressTrack, { backgroundColor: c.surfaceAlt }]}>
                   <View
                     style={[
                       styles.goalProgressFill,
@@ -219,11 +177,11 @@ export default function GoalsScreen() {
                   />
                 </View>
                 <View style={styles.goalAmountsRow}>
-                  <Text style={[styles.goalAmount, isDark && styles.textLight]}>
-                    {formatCurrency(g.current_amount)}
+                  <Text style={[styles.goalAmount, { color: c.text }]}>
+                    {formatCurrency(g.current_amount, activeBudget?.currency)}
                   </Text>
-                  <Text style={[styles.goalTarget, isDark && styles.textMuted]}>
-                    sur {formatCurrency(g.target_amount)}
+                  <Text style={[styles.goalTarget, { color: c.textMuted }]}>
+                    sur {formatCurrency(g.target_amount, activeBudget?.currency)}
                   </Text>
                 </View>
               </View>
@@ -237,8 +195,8 @@ export default function GoalsScreen() {
         onPress={() => router.push("/(modal)/add-goal")}
         style={({ pressed }) => [
           styles.fab,
+          { backgroundColor: c.tint, bottom: bottom + 24 },
           pressed && styles.fabPressed,
-          { bottom: bottom + 24 },
         ]}
       >
         <IconSymbol name="plus" size={22} color="#fff" />
@@ -248,78 +206,18 @@ export default function GoalsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-    paddingHorizontal: 16,
-  },
-  screenDark: {
-    backgroundColor: "#020617",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-  },
-  headerDark: {
-    borderBottomColor: "#1E293B",
-  },
-  headerIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#DCFCE7",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTextWrap: { flex: 1 },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#0F172A",
-  },
-  headerSub: {
-    fontSize: 12,
-    color: "#64748B",
-    marginTop: 2,
-  },
+  screen: { flex: 1, paddingHorizontal: 16 },
 
-  overviewRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 12,
-  },
-  overviewCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  cardDark: {
-    backgroundColor: "#020617",
-    borderColor: "#1E293B",
-  },
+  overviewRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
+  overviewCard: { flex: 1 },
   overviewLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#94A3B8",
     textTransform: "uppercase",
     letterSpacing: 0.6,
   },
-  overviewValue: {
-    fontSize: 18,
-    fontWeight: "800",
-    marginTop: 4,
-    color: "#0F172A",
-  },
-  overviewHint: {
-    fontSize: 12,
-    color: "#64748B",
-    marginTop: 2,
-  },
+  overviewValue: { fontSize: 18, fontWeight: "800", marginTop: 4 },
+  overviewHint: { fontSize: 12, marginTop: 2 },
 
   balanceChip: {
     flexDirection: "row",
@@ -327,143 +225,44 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: "#ECFDF5",
+    borderRadius: Radius.pill,
     marginBottom: 8,
   },
-  balanceChipDark: {
-    backgroundColor: "#052e16",
-  },
-  balanceChipText: {
-    fontSize: 12,
-    color: "#047857",
-  },
+  balanceChipText: { fontSize: 12 },
 
-  list: {
-    flex: 1,
-  },
-
-  loadingWrap: {
-    paddingVertical: 24,
-    alignItems: "center",
-  },
+  list: { flex: 1 },
+  loadingWrap: { paddingVertical: 24, alignItems: "center" },
 
   errorBox: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#FEF3C7",
-    borderRadius: 12,
+    borderRadius: Radius.md,
     padding: 12,
     marginBottom: 8,
   },
-  errorText: {
-    fontSize: 12,
-    color: "#92400E",
-    flex: 1,
-  },
-
-  empty: {
-    marginTop: 40,
-    alignItems: "center",
-    gap: 10,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  emptySub: {
-    fontSize: 13,
-    color: "#64748B",
-    textAlign: "center",
-    lineHeight: 20,
-    paddingHorizontal: 16,
-  },
-  emptyBtn: {
-    marginTop: 10,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: "#10B981",
-  },
-  emptyBtnText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 13,
-  },
+  errorText: { fontSize: 12, flex: 1 },
 
   goalCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: Radius.lg,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
   },
-  goalCardPressed: {
-    transform: [{ scale: 0.985 }],
-    opacity: 0.9,
-  },
-  goalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  goalIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  goalTitleWrap: {
-    flex: 1,
-  },
-  goalTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  goalSubtitle: {
-    fontSize: 11,
-    color: "#94A3B8",
-    marginTop: 2,
-  },
-  goalStatus: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#64748B",
-  },
+  goalCardPressed: { transform: [{ scale: 0.985 }], opacity: 0.9 },
+  goalHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  goalIcon: { width: 34, height: 34, borderRadius: Radius.sm, alignItems: "center", justifyContent: "center" },
+  goalTitleWrap: { flex: 1 },
+  goalTitle: { fontSize: 14, fontWeight: "700" },
+  goalSubtitle: { fontSize: 11, marginTop: 2 },
+  goalStatus: { fontSize: 13, fontWeight: "700" },
 
-  goalProgressBar: {
-    marginTop: 10,
-    gap: 6,
-  },
-  goalProgressTrack: {
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: "#E5E7EB",
-    overflow: "hidden",
-  },
-  goalProgressFill: {
-    height: "100%",
-    borderRadius: 999,
-  },
-  goalAmountsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  goalAmount: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  goalTarget: {
-    fontSize: 12,
-    color: "#64748B",
-  },
+  goalProgressBar: { marginTop: 10, gap: 6 },
+  goalProgressTrack: { height: 6, borderRadius: Radius.pill, overflow: "hidden" },
+  goalProgressFill: { height: "100%", borderRadius: Radius.pill },
+  goalAmountsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  goalAmount: { fontSize: 13, fontWeight: "700" },
+  goalTarget: { fontSize: 12 },
 
   fab: {
     position: "absolute",
@@ -471,20 +270,9 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#10B981",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#10B981",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
+    ...Shadow.md,
   },
-  fabPressed: {
-    transform: [{ scale: 0.94 }],
-    shadowOpacity: 0.2,
-  },
-
-  textLight: { color: "#F9FAFB" },
-  textMuted: { color: "#9CA3AF" },
+  fabPressed: { transform: [{ scale: 0.94 }] },
 });

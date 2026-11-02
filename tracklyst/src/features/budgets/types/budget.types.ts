@@ -6,6 +6,7 @@ export interface Budget {
   owner_id: string;
   currency: string;
   initial_amount?: number;
+  theme?: string;
   created_at: string;
   updated_at: string;
 }
@@ -17,9 +18,10 @@ export interface CreateBudgetDTO {
   owner_id: string;
   currency?: string;
   initial_amount?: number;
+  theme?: string;
 }
 
-export type UpdateBudgetDTO = Partial<Pick<Budget, 'name' | 'currency'>>;
+export type UpdateBudgetDTO = Partial<Pick<Budget, 'name' | 'currency' | 'theme'>>;
 
 // ─── Balance (calculated view) ────────────────────────────────────────────────
 export interface BudgetBalance {

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { budgetService } from '../../budgets/services/budgetService';
+import { useBudgetStore } from '../../budgets/store/budgetStore';
 import { transactionService } from '../services/transactionService';
 import { useTransactionStore } from '../store/transactionStore';
 import type { UpdateTransactionDTO } from '../types/transaction.types';
@@ -27,6 +29,14 @@ export const useUpdateTransaction = () => {
       const updated = await transactionService.updateTransaction(id, dto);
       // Sync with server truth (includes joined category)
       useTransactionStore.getState().updateTransaction(id, updated);
+
+      // Recalculer le solde du budget concerné (le montant/type a pu changer)
+      const { activeBudget, setBalance } = useBudgetStore.getState();
+      const balance = await budgetService.getBalance(updated.budget_id);
+      if (activeBudget?.id === updated.budget_id) {
+        setBalance(balance);
+      }
+
       return updated;
     } catch (err) {
       // Rollback

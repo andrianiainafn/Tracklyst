@@ -28,6 +28,19 @@ export const transactionService = {
   },
 
   /**
+   * Count transactions for a budget (no rows transferred).
+   */
+  async countTransactions(budgetId: string): Promise<number> {
+    const { count, error } = await supabase
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("budget_id", budgetId);
+
+    if (error) throw error;
+    return count ?? 0;
+  },
+
+  /**
    * Fetch transactions filtered by type (income / expense).
    */
   async getTransactionsByType(

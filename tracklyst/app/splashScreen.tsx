@@ -1,10 +1,16 @@
-import { ThemedText } from "@/src/components/themed-text";
-import { ThemedView } from "@/src/components/themed-view";
+import { Colors } from "@/constants/theme";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+  Animated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  useColorScheme,
+} from "react-native";
 
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
 
@@ -12,8 +18,6 @@ interface OnboardingSlide {
   id: number;
   title: string;
   description: string;
-  color: string;
-  iconBg: string;
   icon: FeatherIconName;
 }
 
@@ -23,8 +27,6 @@ const SLIDES: OnboardingSlide[] = [
     title: "Gérez vos finances",
     description:
       "Suivez vos revenus et dépenses en temps réel. Gardez le contrôle total sur votre argent.",
-    color: "#10B981",
-    iconBg: "#D1FAE5",
     icon: "trending-up",
   },
   {
@@ -32,8 +34,6 @@ const SLIDES: OnboardingSlide[] = [
     title: "Organisez vos transactions",
     description:
       "Catégorisez automatiquement vos dépenses et revenus. Visualisez où va votre argent.",
-    color: "#3B82F6",
-    iconBg: "#DBEAFE",
     icon: "layers",
   },
   {
@@ -41,8 +41,6 @@ const SLIDES: OnboardingSlide[] = [
     title: "Atteignez vos objectifs",
     description:
       "Définissez des objectifs financiers et suivez vos progrès. Économisez pour ce qui compte vraiment.",
-    color: "#8B5CF6",
-    iconBg: "#EDE9FE",
     icon: "target",
   },
   {
@@ -50,13 +48,13 @@ const SLIDES: OnboardingSlide[] = [
     title: "Budgets partagés",
     description:
       "Créez des budgets en groupe avec famille ou amis. Gérez vos finances ensemble en toute transparence.",
-    color: "#EC4899",
-    iconBg: "#FCE7F3",
     icon: "users",
   },
 ];
 
 export default function SplashScreen() {
+  const isDark = useColorScheme() === "dark";
+  const c = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMounted, setIsMounted] = useState(false);
@@ -107,14 +105,14 @@ export default function SplashScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <StatusBar style="dark" />
+    <View style={[styles.container, { backgroundColor: c.bg }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
 
       {/* Skip */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
-          <ThemedText style={styles.skipText}>Passer</ThemedText>
-          <Feather name="arrow-right" size={14} color="#9CA3AF" />
+          <Text style={[styles.skipText, { color: c.textSubtle }]}>Passer</Text>
+          <Feather name="arrow-right" size={14} color={c.textSubtle} />
         </TouchableOpacity>
       </View>
 
@@ -122,35 +120,21 @@ export default function SplashScreen() {
       <View style={styles.content}>
         {/* Icon illustration */}
         <View style={styles.iconWrapper}>
-          <View
-            style={[
-              styles.iconRing,
-              { borderColor: currentSlide.color + "22" },
-            ]}
-          >
-            <View
-              style={[
-                styles.iconCircle,
-                { backgroundColor: currentSlide.iconBg },
-              ]}
-            >
-              <Feather
-                name={currentSlide.icon}
-                size={40}
-                color={currentSlide.color}
-              />
+          <View style={[styles.iconRing, { borderColor: c.tint + "22" }]}>
+            <View style={[styles.iconCircle, { backgroundColor: c.tintMuted }]}>
+              <Feather name={currentSlide.icon} size={40} color={c.tint} />
             </View>
           </View>
         </View>
 
         {/* Text */}
         <View style={styles.textContent}>
-          <ThemedText type="title" style={styles.title}>
+          <Text style={[styles.title, { color: c.text }]}>
             {currentSlide.title}
-          </ThemedText>
-          <ThemedText style={styles.description}>
+          </Text>
+          <Text style={[styles.description, { color: c.textMuted }]}>
             {currentSlide.description}
-          </ThemedText>
+          </Text>
         </View>
       </View>
 
@@ -164,8 +148,8 @@ export default function SplashScreen() {
               style={[
                 styles.dot,
                 index === safeIndex
-                  ? [styles.dotActive, { backgroundColor: currentSlide.color }]
-                  : styles.dotInactive,
+                  ? [styles.dotActive, { backgroundColor: c.tint }]
+                  : [styles.dotInactive, { backgroundColor: c.border }],
               ]}
             />
           ))}
@@ -174,13 +158,13 @@ export default function SplashScreen() {
         {/* CTA Button */}
         <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
           <TouchableOpacity
-            style={[styles.button, { backgroundColor: currentSlide.color }]}
+            style={[styles.button, { backgroundColor: c.tint }]}
             onPress={handleNext}
             activeOpacity={0.9}
           >
-            <ThemedText style={styles.buttonText}>
+            <Text style={styles.buttonText}>
               {isLast ? "Commencer" : "Suivant"}
-            </ThemedText>
+            </Text>
             <Feather
               name={isLast ? "check" : "arrow-right"}
               size={18}
@@ -190,14 +174,13 @@ export default function SplashScreen() {
           </TouchableOpacity>
         </Animated.View>
       </View>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
   },
 
   header: {
@@ -214,7 +197,6 @@ const styles = StyleSheet.create({
   },
   skipText: {
     fontSize: 14,
-    color: "#9CA3AF",
     fontWeight: "500",
   },
 
@@ -248,15 +230,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: "700",
+    fontWeight: "800",
     textAlign: "center",
     letterSpacing: -0.4,
-    color: "#111827",
   },
   description: {
     fontSize: 15,
     textAlign: "center",
-    color: "#6B7280",
     lineHeight: 24,
     maxWidth: 300,
   },
@@ -281,7 +261,6 @@ const styles = StyleSheet.create({
   },
   dotInactive: {
     width: 6,
-    backgroundColor: "#D1D5DB",
   },
   button: {
     height: 54,
@@ -289,8 +268,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.15,
     shadowRadius: 14,
     elevation: 5,
   },

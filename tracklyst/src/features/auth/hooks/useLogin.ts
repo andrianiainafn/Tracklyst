@@ -65,12 +65,34 @@ export const useLogin = () => {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    if (!email) {
+      setError("Email is required");
+      return false;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      await authService.resetPassword(email);
+      return true;
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to send reset email";
+      setError(message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const clearError = () => setError(null);
 
   return {
     loginWithPassword,
     loginWithOAuth,
     sendMagicLink,
+    resetPassword,
     magicLinkSent,
     isLoading,
     error,

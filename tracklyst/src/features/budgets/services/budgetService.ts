@@ -14,7 +14,7 @@ export const budgetService = {
   async getBudgets(): Promise<Budget[]> {
     const { data, error } = await supabase
       .from("budgets")
-      .select("id, name, owner_type, owner_id, currency, initial_amount, created_at, updated_at")
+      .select("id, name, owner_type, owner_id, currency, initial_amount, theme, created_at, updated_at")
       .order("created_at", { ascending: true });
 
     if (error) throw error;
@@ -30,7 +30,7 @@ export const budgetService = {
   async getBudgetById(id: string): Promise<Budget> {
     const { data, error } = await supabase
       .from("budgets")
-      .select("id, name, owner_type, owner_id, currency, initial_amount, created_at, updated_at")
+      .select("id, name, owner_type, owner_id, currency, initial_amount, theme, created_at, updated_at")
       .eq("id", id)
       .single();
 

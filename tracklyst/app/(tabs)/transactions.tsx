@@ -1,4 +1,10 @@
+import { Colors, Radius, Shadow } from "@/constants/theme";
 import { IconSymbol } from "@/src/components/ui/icon-symbol.ios";
+import { Card } from "@/src/components/ui/Card";
+import { EmptyState } from "@/src/components/ui/EmptyState";
+import { useBudgetStore } from "@/src/features/budgets/store/budgetStore";
+import { useNotifications } from "@/src/features/notifications/hooks/useNotifications";
+import { useDeleteTransaction } from "@/src/features/transaction/hooks/useDeleteTransaction";
 import { useTransactions } from "@/src/features/transaction/hooks/useTransactions";
 import { Transaction } from "@/src/features/transaction/types/transaction.types";
 import { formatCurrency } from "@/src/utils/currency";
@@ -9,6 +15,7 @@ import { useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -29,46 +36,23 @@ const FILTERS: { label: string; value: Filter }[] = [
   { label: "Dépenses", value: "expense" },
 ];
 
-const CATEGORY_ICONS: Record<string, string> = {
-  Salaire: "briefcase.fill",
-  "Autre revenu": "plus.circle.fill",
-  Loyer: "house.fill",
-  Courses: "cart.fill",
-  Transport: "car.fill",
-  Abonnements: "bell.fill",
-  Loisirs: "gamecontroller.fill",
-  Restaurant: "fork.knife",
-  Santé: "heart.fill",
-  "Autre dépense": "ellipsis.circle.fill",
-};
-
-const CATEGORY_COLORS: Record<string, string> = {
-  Salaire: "#10B981",
-  "Autre revenu": "#34D399",
-  Loyer: "#6366F1",
-  Courses: "#F59E0B",
-  Transport: "#3B82F6",
-  Abonnements: "#8B5CF6",
-  Loisirs: "#EC4899",
-  Restaurant: "#F97316",
-  Santé: "#06B6D4",
-  "Autre dépense": "#6B7280",
-};
-
-const getCategoryIcon = (name?: string) =>
-  (name && CATEGORY_ICONS[name]) ?? "creditcard.fill";
-
-const getCategoryColor = (name?: string) =>
-  (name && CATEGORY_COLORS[name]) ?? "#6B7280";
-
 // ─── Header ────────────────────────────────────────────────────────────────────
 function Header({
   transactions,
   top,
+  currency,
+  notificationsCount,
+  onBellPress,
+  isDark,
 }: {
   transactions: Transaction[];
   top: number;
+  currency?: string;
+  notificationsCount: number;
+  onBellPress: () => void;
+  isDark: boolean;
 }) {
+  const c = isDark ? Colors.dark : Colors.light;
   const totals = useMemo(() => {
     let income = 0;
     let expense = 0;
@@ -84,58 +68,64 @@ function Header({
       {/* Top bar */}
       <View style={styles.headerTopBar}>
         <View>
-          <Text style={styles.headerEyebrow}>VUE D'ENSEMBLE</Text>
-          <Text style={styles.headerTitle}>Transactions</Text>
+          <Text style={[styles.headerEyebrow, { color: c.textSubtle }]}>
+            VUE D'ENSEMBLE
+          </Text>
+          <Text style={[styles.headerTitle, { color: c.text }]}>Transactions</Text>
         </View>
-        <View style={styles.headerActions}>
-          <Pressable style={styles.headerIconBtn}>
-            <IconSymbol
-              name="bell.fill"
-              size={16}
-              color="rgba(255,255,255,0.8)"
-            />
-          </Pressable>
-        </View>
+        <Pressable
+          style={[styles.headerIconBtn, { backgroundColor: c.surfaceAlt }]}
+          onPress={onBellPress}
+        >
+          <IconSymbol name="bell.fill" size={16} color={c.textMuted} />
+          {notificationsCount > 0 && (
+            <View style={[styles.headerIconBadge, { borderColor: c.bg }]}>
+              <Text style={styles.headerIconBadgeText}>
+                {notificationsCount > 9 ? "9+" : notificationsCount}
+              </Text>
+            </View>
+          )}
+        </Pressable>
       </View>
 
       {/* Balance card */}
-      <View style={styles.balanceCard}>
-        <Text style={styles.balanceLabel}>Solde actuel</Text>
-        <Text style={styles.balanceAmount}>
+      <Card style={styles.balanceCard} padding={20}>
+        <Text style={[styles.balanceLabel, { color: c.textSubtle }]}>Solde actuel</Text>
+        <Text style={[styles.balanceAmount, { color: c.text }]}>
           {totals.balance >= 0 ? "+" : ""}
-          {formatCurrency(totals.balance)}
+          {formatCurrency(totals.balance, currency)}
         </Text>
 
-        <View style={styles.balanceDivider} />
+        <View style={[styles.balanceDivider, { backgroundColor: c.border }]} />
 
         <View style={styles.balanceStats}>
           <View style={styles.balanceStat}>
-            <View style={styles.balanceStatIcon}>
-              <Feather name="arrow-up-circle" size={24} color="#10B981" />
+            <View style={[styles.balanceStatIcon, { backgroundColor: c.tintMuted }]}>
+              <Feather name="arrow-up-circle" size={22} color={c.tint} />
             </View>
             <View>
-              <Text style={styles.balanceStatLabel}>Revenus</Text>
-              <Text style={[styles.balanceStatValue, { color: "#10B981" }]}>
-                +{formatCurrency(totals.income)}
+              <Text style={[styles.balanceStatLabel, { color: c.textSubtle }]}>Revenus</Text>
+              <Text style={[styles.balanceStatValue, { color: c.tint }]}>
+                +{formatCurrency(totals.income, currency)}
               </Text>
             </View>
           </View>
 
-          <View style={styles.balanceStatSep} />
+          <View style={[styles.balanceStatSep, { backgroundColor: c.border }]} />
 
           <View style={styles.balanceStat}>
-            <View style={[styles.balanceStatIcon, styles.balanceStatIconRed]}>
-              <Feather name="arrow-down-circle" size={24} color="#EF4444" />
+            <View style={[styles.balanceStatIcon, { backgroundColor: c.dangerMuted }]}>
+              <Feather name="arrow-down-circle" size={22} color={c.danger} />
             </View>
             <View>
-              <Text style={styles.balanceStatLabel}>Dépenses</Text>
-              <Text style={[styles.balanceStatValue, { color: "#EF4444" }]}>
-                -{formatCurrency(totals.expense)}
+              <Text style={[styles.balanceStatLabel, { color: c.textSubtle }]}>Dépenses</Text>
+              <Text style={[styles.balanceStatValue, { color: c.danger }]}>
+                -{formatCurrency(totals.expense, currency)}
               </Text>
             </View>
           </View>
         </View>
-      </View>
+      </Card>
     </View>
   );
 }
@@ -150,8 +140,9 @@ function FilterTabs({
   onChange: (f: Filter) => void;
   isDark: boolean;
 }) {
+  const c = isDark ? Colors.dark : Colors.light;
   return (
-    <View style={[styles.filterWrap, isDark && styles.filterWrapDark]}>
+    <View style={[styles.filterWrap, { backgroundColor: c.surfaceAlt }]}>
       {FILTERS.map((f) => {
         const isActive = f.value === active;
         return (
@@ -160,20 +151,14 @@ function FilterTabs({
             onPress={() => onChange(f.value)}
             style={[
               styles.filterChip,
-              isActive &&
-                (isDark
-                  ? styles.filterChipActiveDark
-                  : styles.filterChipActive),
+              isActive && { backgroundColor: c.surface, ...Shadow.sm },
             ]}
           >
             <Text
               style={[
                 styles.filterChipText,
-                isActive
-                  ? isDark
-                    ? styles.filterChipTextActiveDark
-                    : styles.filterChipTextActive
-                  : styles.filterChipTextInactive,
+                { color: isActive ? c.text : c.textSubtle },
+                isActive && { fontWeight: "700" },
               ]}
             >
               {f.label}
@@ -189,14 +174,19 @@ function FilterTabs({
 function TransactionRow({
   item,
   isDark,
+  currency,
+  onPress,
 }: {
   item: Transaction;
   isDark: boolean;
+  currency?: string;
+  onPress: () => void;
 }) {
+  const c = isDark ? Colors.dark : Colors.light;
   const isIncome = item.type === "income";
-  const amountColor = isIncome ? "#10B981" : "#EF4444";
-  const iconName = getCategoryIcon(item.category?.name);
-  const iconColor = getCategoryColor(item.category?.name);
+  const amountColor = isIncome ? c.tint : c.danger;
+  const categoryIcon = item.category?.icon ?? "💳";
+  const categoryColor = item.category?.color ?? "#6B7280";
   const label = item.description ?? item.category?.name ?? "—";
   const sub =
     item.description && item.category?.name
@@ -205,27 +195,25 @@ function TransactionRow({
 
   return (
     <Pressable
+      onPress={onPress}
       style={({ pressed }) => [
         styles.row,
-        isDark && styles.rowDark,
+        { backgroundColor: c.surface, borderColor: c.border },
         pressed && styles.rowPressed,
       ]}
     >
-      <View style={[styles.rowIcon, { backgroundColor: iconColor + "15" }]}>
-        <IconSymbol name={iconName as any} size={19} color={iconColor} />
+      <View style={[styles.rowIcon, { backgroundColor: categoryColor + "15" }]}>
+        <Text style={styles.rowIconEmoji}>{categoryIcon}</Text>
       </View>
       <View style={styles.rowBody}>
-        <Text
-          style={[styles.rowName, isDark && styles.textWhite]}
-          numberOfLines={1}
-        >
+        <Text style={[styles.rowName, { color: c.text }]} numberOfLines={1}>
           {label}
         </Text>
-        <Text style={styles.rowSub}>{sub}</Text>
+        <Text style={[styles.rowSub, { color: c.textSubtle }]}>{sub}</Text>
       </View>
       <Text style={[styles.rowAmount, { color: amountColor }]}>
         {isIncome ? "+" : "−"}
-        {formatCurrency(item.amount)}
+        {formatCurrency(item.amount, currency)}
       </Text>
     </Pressable>
   );
@@ -233,34 +221,10 @@ function TransactionRow({
 
 // ─── Section header ───────────────────────────────────────────────────────────
 function SectionLabel({ title, isDark }: { title: string; isDark: boolean }) {
+  const c = isDark ? Colors.dark : Colors.light;
   return (
     <View style={styles.sectionLabelWrap}>
-      <Text
-        style={[styles.sectionLabelText, isDark && styles.sectionLabelDark]}
-      >
-        {title}
-      </Text>
-    </View>
-  );
-}
-
-// ─── Empty state ──────────────────────────────────────────────────────────────
-function EmptyState({ isDark }: { isDark: boolean }) {
-  return (
-    <View style={styles.empty}>
-      <View style={[styles.emptyBubble, isDark && styles.emptyBubbleDark]}>
-        <IconSymbol
-          name="tray.fill"
-          size={26}
-          color={isDark ? "#4B5563" : "#CBD5E1"}
-        />
-      </View>
-      <Text style={[styles.emptyTitle, isDark && styles.textWhite]}>
-        Aucune transaction
-      </Text>
-      <Text style={styles.emptyHint}>
-        Appuyez sur le bouton + pour{"\n"}ajouter votre première transaction.
-      </Text>
+      <Text style={[styles.sectionLabelText, { color: c.textSubtle }]}>{title}</Text>
     </View>
   );
 }
@@ -268,12 +232,75 @@ function EmptyState({ isDark }: { isDark: boolean }) {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function TransactionsScreen() {
   const isDark = useColorScheme() === "dark";
+  const c = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
   const { top, bottom } = useSafeAreaInsets();
 
   const { transactions, isLoading, error, refresh } = useTransactions();
+  const { activeBudget } = useBudgetStore();
+  const { notifications } = useNotifications();
+  const { deleteTransaction } = useDeleteTransaction();
   const [filter, setFilter] = useState<Filter>("all");
   const [refreshing, setRefreshing] = useState(false);
+
+  const confirmDelete = useCallback(
+    (id: string) => {
+      Alert.alert(
+        "Supprimer la transaction",
+        "Cette action est irréversible.",
+        [
+          { text: "Annuler", style: "cancel" },
+          {
+            text: "Supprimer",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await deleteTransaction(id);
+              } catch (err) {
+                Alert.alert(
+                  "Erreur",
+                  err instanceof Error
+                    ? err.message
+                    : "Impossible de supprimer la transaction.",
+                );
+              }
+            },
+          },
+        ],
+      );
+    },
+    [deleteTransaction],
+  );
+
+  const handleTransactionPress = useCallback(
+    (item: Transaction) => {
+      Alert.alert(item.description ?? item.category?.name ?? "Transaction", undefined, [
+        {
+          text: "Modifier",
+          onPress: () =>
+            router.push({
+              pathname: "/(modal)/add-transaction",
+              params: {
+                id: item.id,
+                type: item.type,
+                amount: String(item.amount),
+                category_id: item.category_id,
+                description: item.description ?? "",
+                date: item.date,
+                budget_id: item.budget_id,
+              },
+            } as any),
+        },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: () => confirmDelete(item.id),
+        },
+        { text: "Annuler", style: "cancel" },
+      ]);
+    },
+    [router, confirmDelete],
+  );
 
   const grouped = useMemo(() => {
     const filtered =
@@ -299,51 +326,56 @@ export default function TransactionsScreen() {
   }, [refresh]);
 
   return (
-    <View style={[styles.screen, isDark && styles.screenDark]}>
-      <StatusBar barStyle="light-content" />
+    <View style={[styles.screen, { backgroundColor: c.bg }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: bottom + 100 }}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#10B981"
-            progressViewOffset={200}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.tint} />
         }
       >
-        {/* ── Header avec gradient sombre ── */}
-        <Header transactions={transactions} top={top} />
+        <Header
+          transactions={transactions}
+          top={top}
+          currency={activeBudget?.currency}
+          notificationsCount={notifications.length}
+          onBellPress={() => router.push("/(modal)/notifications" as any)}
+          isDark={isDark}
+        />
 
-        {/* ── Corps ── */}
-        <View style={[styles.body, isDark && styles.bodyDark]}>
+        <View style={styles.body}>
           {/* Filters */}
           <View style={styles.filtersSection}>
-            <Text style={[styles.sectionTitle, isDark && styles.textWhite]}>
-              Historique
-            </Text>
+            <Text style={[styles.sectionTitle, { color: c.text }]}>Historique</Text>
             <FilterTabs active={filter} onChange={setFilter} isDark={isDark} />
           </View>
 
           {/* Content */}
           {isLoading && transactions.length === 0 ? (
             <View style={styles.loadingWrap}>
-              <ActivityIndicator color="#10B981" size="large" />
+              <ActivityIndicator color={c.tint} size="large" />
             </View>
           ) : grouped.length === 0 ? (
-            <EmptyState isDark={isDark} />
+            <EmptyState
+              icon="file-tray-outline"
+              title="Aucune transaction"
+              subtitle={"Appuyez sur le bouton + pour\najouter votre première transaction."}
+            />
           ) : (
             <View style={styles.listWrap}>
               {grouped.map(([date, items]) => (
                 <View key={date}>
-                  <SectionLabel
-                    title={formatDate(date, { relative: true })}
-                    isDark={isDark}
-                  />
+                  <SectionLabel title={formatDate(date, { relative: true })} isDark={isDark} />
                   {items.map((item) => (
-                    <TransactionRow key={item.id} item={item} isDark={isDark} />
+                    <TransactionRow
+                      key={item.id}
+                      item={item}
+                      isDark={isDark}
+                      currency={activeBudget?.currency}
+                      onPress={() => handleTransactionPress(item)}
+                    />
                   ))}
                 </View>
               ))}
@@ -352,13 +384,9 @@ export default function TransactionsScreen() {
 
           {/* Error */}
           {error && (
-            <View style={styles.errorBanner}>
-              <IconSymbol
-                name="exclamationmark.triangle.fill"
-                size={14}
-                color="#F59E0B"
-              />
-              <Text style={styles.errorText}>{error}</Text>
+            <View style={[styles.errorBanner, { backgroundColor: c.dangerMuted }]}>
+              <IconSymbol name="exclamationmark.triangle.fill" size={14} color={c.danger} />
+              <Text style={[styles.errorText, { color: c.danger }]}>{error}</Text>
             </View>
           )}
         </View>
@@ -369,346 +397,122 @@ export default function TransactionsScreen() {
         onPress={() => router.push("/(modal)/add-transaction")}
         style={({ pressed }) => [
           styles.fab,
-          { bottom: bottom + 24 },
+          { bottom: bottom + 24, backgroundColor: c.tint },
           pressed && styles.fabPressed,
         ]}
       >
-        <Ionicons name="add" size={24} color="white" />
+        <Ionicons name="add" size={24} color="#fff" />
       </Pressable>
     </View>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const HEADER_BG = "#0D4F3C";
-const HEADER_BG2 = "#0A6B50";
-
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  screenDark: {
-    backgroundColor: "#0F172A",
-  },
+  screen: { flex: 1 },
 
-  // ── Header ──
-  header: {
-    backgroundColor: HEADER_BG,
-    paddingHorizontal: 20,
-    paddingBottom: 28,
-  },
+  header: { paddingHorizontal: 20, paddingBottom: 4 },
   headerTopBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  headerEyebrow: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "rgba(255,255,255,0.5)",
-    letterSpacing: 1.5,
-    marginBottom: 4,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: "#fff",
-    letterSpacing: -0.5,
-  },
-  headerActions: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 4,
-  },
+  headerEyebrow: { fontSize: 10, fontWeight: "700", letterSpacing: 1.5, marginBottom: 4 },
+  headerTitle: { fontSize: 24, fontWeight: "800", letterSpacing: -0.5 },
   headerIconBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "rgba(255,255,255,0.1)",
     alignItems: "center",
     justifyContent: "center",
+    position: "relative",
+    marginTop: 2,
   },
+  headerIconBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 3,
+    backgroundColor: "#EF4444",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+  },
+  headerIconBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
 
-  // Balance card inside header
-  balanceCard: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.12)",
-  },
-  balanceLabel: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.6)",
-    fontWeight: "500",
-    marginBottom: 6,
-    letterSpacing: 0.3,
-  },
-  balanceAmount: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: "#fff",
-    letterSpacing: -1,
-    marginBottom: 16,
-  },
-  balanceDivider: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    marginBottom: 16,
-  },
-  balanceStats: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  balanceStat: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
+  balanceCard: { marginBottom: 8 },
+  balanceLabel: { fontSize: 12, fontWeight: "500", marginBottom: 6, letterSpacing: 0.3 },
+  balanceAmount: { fontSize: 30, fontWeight: "800", letterSpacing: -1, marginBottom: 16 },
+  balanceDivider: { height: 1, marginBottom: 16 },
+  balanceStats: { flexDirection: "row", alignItems: "center" },
+  balanceStat: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
   balanceStatIcon: {
     width: 32,
     height: 32,
-    borderRadius: 10,
-    backgroundColor: "rgba(16,185,129,0.15)",
+    borderRadius: Radius.sm,
     alignItems: "center",
     justifyContent: "center",
   },
-  balanceStatIconRed: {
-    backgroundColor: "rgba(239,68,68,0.15)",
-  },
-  balanceStatLabel: {
-    fontSize: 11,
-    color: "rgba(255,255,255,0.5)",
-    fontWeight: "500",
-    marginBottom: 2,
-  },
-  balanceStatValue: {
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: -0.3,
-  },
-  balanceStatSep: {
-    width: 1,
-    height: 32,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    marginHorizontal: 12,
-  },
+  balanceStatLabel: { fontSize: 11, fontWeight: "500", marginBottom: 2 },
+  balanceStatValue: { fontSize: 14, fontWeight: "700", letterSpacing: -0.3 },
+  balanceStatSep: { width: 1, height: 32, marginHorizontal: 12 },
 
-  // ── Body ──
-  body: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    marginTop: 0,
-  },
-  bodyDark: {
-    backgroundColor: "#0F172A",
-  },
+  body: { flex: 1 },
+  filtersSection: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 4 },
+  sectionTitle: { fontSize: 17, fontWeight: "700", marginBottom: 14, letterSpacing: -0.3 },
+  filterWrap: { flexDirection: "row", borderRadius: Radius.md, padding: 4, gap: 3 },
+  filterChip: { flex: 1, paddingVertical: 8, borderRadius: Radius.sm, alignItems: "center" },
+  filterChipText: { fontSize: 13, fontWeight: "600" },
 
-  // Filters section
-  filtersSection: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 4,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 14,
-    letterSpacing: -0.3,
-  },
-  filterWrap: {
-    flexDirection: "row",
-    backgroundColor: "#EFF2F7",
-    borderRadius: 14,
-    padding: 4,
-    gap: 3,
-  },
-  filterWrapDark: {
-    backgroundColor: "#1E293B",
-  },
-  filterChip: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 11,
-    alignItems: "center",
-  },
-  filterChipActive: {
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  filterChipActiveDark: {
-    backgroundColor: "#334155",
-  },
-  filterChipText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  filterChipTextActive: {
-    color: "#0F172A",
-  },
-  filterChipTextActiveDark: {
-    color: "#F8FAFC",
-  },
-  filterChipTextInactive: {
-    color: "#94A3B8",
-  },
+  listWrap: { paddingHorizontal: 20, paddingTop: 8 },
+  sectionLabelWrap: { paddingVertical: 10, paddingTop: 16 },
+  sectionLabelText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase" },
 
-  // ── List ──
-  listWrap: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-  },
-  sectionLabelWrap: {
-    paddingVertical: 10,
-    paddingTop: 16,
-  },
-  sectionLabelText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#94A3B8",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
-  sectionLabelDark: {
-    color: "#475569",
-  },
-
-  // Transaction row
   row: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 16,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginBottom: 8,
     gap: 14,
-    shadowColor: "#64748B",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    ...Shadow.sm,
   },
-  rowDark: {
-    backgroundColor: "#1E293B",
-    shadowOpacity: 0,
-  },
-  rowPressed: {
-    opacity: 0.75,
-    transform: [{ scale: 0.985 }],
-  },
-  rowIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rowBody: {
-    flex: 1,
-    gap: 3,
-  },
-  rowName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0F172A",
-  },
-  rowSub: {
-    fontSize: 12,
-    color: "#94A3B8",
-    fontWeight: "400",
-  },
-  rowAmount: {
-    fontSize: 15,
-    fontWeight: "700",
-    letterSpacing: -0.4,
-  },
+  rowPressed: { opacity: 0.8, transform: [{ scale: 0.985 }] },
+  rowIcon: { width: 44, height: 44, borderRadius: Radius.md, alignItems: "center", justifyContent: "center" },
+  rowIconEmoji: { fontSize: 20 },
+  rowBody: { flex: 1, gap: 3 },
+  rowName: { fontSize: 14, fontWeight: "600" },
+  rowSub: { fontSize: 12, fontWeight: "400" },
+  rowAmount: { fontSize: 15, fontWeight: "700", letterSpacing: -0.4 },
 
-  // ── Empty ──
-  empty: {
-    alignItems: "center",
-    paddingVertical: 60,
-    paddingHorizontal: 40,
-    gap: 12,
-  },
-  emptyBubble: {
-    width: 72,
-    height: 72,
-    borderRadius: 24,
-    backgroundColor: "#F1F5F9",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  emptyBubbleDark: {
-    backgroundColor: "#1E293B",
-  },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  emptyHint: {
-    fontSize: 13,
-    color: "#94A3B8",
-    textAlign: "center",
-    lineHeight: 20,
-  },
+  loadingWrap: { paddingVertical: 60, alignItems: "center" },
 
-  // ── Loading ──
-  loadingWrap: {
-    paddingVertical: 60,
-    alignItems: "center",
-  },
-
-  // ── Error ──
   errorBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#FEF3C7",
-    borderRadius: 12,
+    borderRadius: Radius.md,
     padding: 14,
     margin: 20,
     marginTop: 8,
   },
-  errorText: {
-    fontSize: 12,
-    color: "#92400E",
-    flex: 1,
-  },
+  errorText: { fontSize: 12, flex: 1 },
 
-  // ── FAB ──
   fab: {
     position: "absolute",
     right: 20,
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: "#10B981",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#10B981",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 14,
-    elevation: 10,
+    ...Shadow.md,
   },
-  fabPressed: {
-    transform: [{ scale: 0.93 }],
-    shadowOpacity: 0.2,
-  },
-
-  // ── Helpers ──
-  textWhite: { color: "#F8FAFC" },
+  fabPressed: { transform: [{ scale: 0.93 }] },
 });
