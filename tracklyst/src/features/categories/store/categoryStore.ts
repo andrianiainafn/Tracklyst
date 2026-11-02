@@ -9,6 +9,7 @@ interface CategoryState {
 
   setCategories: (categories: Category[]) => void;
   addCategory: (category: Category) => void;
+  updateCategory: (category: Category) => void;
   deleteCategory: (id: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -26,6 +27,13 @@ export const useCategoryStore = create<CategoryState>()(
 
       addCategory: (category) =>
         set((state) => ({ categories: [...state.categories, category] })),
+
+      updateCategory: (category) =>
+        set((state) => ({
+          categories: state.categories.map((c) =>
+            c.id === category.id ? category : c,
+          ),
+        })),
 
       deleteCategory: (id) =>
         set((state) => ({

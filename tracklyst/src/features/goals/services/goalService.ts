@@ -25,6 +25,16 @@ export const goalService = {
     return data as Goal[];
   },
 
+  async countGoals(budgetId: string): Promise<number> {
+    const { count, error } = await supabase
+      .from("goals")
+      .select("id", { count: "exact", head: true })
+      .eq("budget_id", budgetId);
+
+    if (error) throw error;
+    return count ?? 0;
+  },
+
   async createGoal(dto: CreateGoalDTO): Promise<Goal> {
     const { data, error } = await supabase
       .from("goals")
@@ -70,6 +80,23 @@ export const goalService = {
       .eq("goal_id", goalId)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data as GoalTransaction[];
+  },
+
+  /** Mouvements d'épargne de tous les objectifs d'un budget sur une période. */
+  async getGoalTransactionsByDateRange(
+    budgetId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<GoalTransaction[]> {
+    const { data, error } = await supabase
+      .from("goal_transactions")
+      .select("*")
+      .eq("budget_id", budgetId)
+      .gte("date", startDate)
+      .lte("date", endDate);
 
     if (error) throw error;
     return data as GoalTransaction[];

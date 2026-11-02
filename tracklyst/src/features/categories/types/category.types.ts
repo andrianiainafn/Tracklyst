@@ -5,6 +5,8 @@ export interface Category {
   type: "income" | "expense";
   icon: string | null;
   color: string | null;
+  /** Plafond de dépense par mois. null = pas de plafond. */
+  monthly_limit: number | null;
   created_at: string;
   updated_at: string;
 }

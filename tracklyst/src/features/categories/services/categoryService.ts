@@ -24,6 +24,21 @@ export const categoryService = {
     return data as Category;
   },
 
+  async updateMonthlyLimit(
+    id: string,
+    monthlyLimit: number | null,
+  ): Promise<Category> {
+    const { data, error } = await supabase
+      .from("categories")
+      .update({ monthly_limit: monthlyLimit })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Category;
+  },
+
   async deleteCategory(id: string): Promise<void> {
     const { error } = await supabase.from("categories").delete().eq("id", id);
 
