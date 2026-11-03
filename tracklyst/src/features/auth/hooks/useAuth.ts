@@ -2,6 +2,7 @@ import { supabase } from "@/src/lib/supabase";
 import { useEffect } from "react";
 import { authService } from "../services/authService";
 import { useAuthStore } from "../store/authStore";
+import { getErrorMessage } from "@/src/utils/errors";
 
 /**
  * Core auth hook – initializes the session listener.
@@ -29,7 +30,7 @@ export const useAuth = () => {
         setInitialized(true);
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : "Failed to load session");
+        setError(getErrorMessage(err, "Failed to load session"));
         setInitialized(true);
       });
 

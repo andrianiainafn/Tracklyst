@@ -3,6 +3,7 @@ import { useBudgetStore } from "../../budgets/store/budgetStore";
 import { goalService } from "../services/goalService";
 import { useGoalStore } from "../store/goalStore";
 import type { CreateGoalDTO, UpdateGoalDTO } from "../types/goal.types";
+import { getErrorMessage } from "@/src/utils/errors";
 
 export const useGoals = () => {
   const {
@@ -29,7 +30,7 @@ export const useGoals = () => {
         setGoals(data);
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "Erreur de chargement des objectifs",
+          getErrorMessage(err, "Erreur de chargement des objectifs"),
         );
       }
     };
@@ -49,7 +50,7 @@ export const useGoals = () => {
       return created;
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : "Erreur lors de la création";
+        getErrorMessage(err, "Erreur lors de la création");
       setError(msg);
       throw err;
     } finally {
@@ -65,7 +66,7 @@ export const useGoals = () => {
       return updated;
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : "Erreur lors de la mise à jour";
+        getErrorMessage(err, "Erreur lors de la mise à jour");
       setError(msg);
       throw err;
     } finally {
@@ -80,7 +81,7 @@ export const useGoals = () => {
       deleteGoal(id);
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : "Erreur lors de la suppression";
+        getErrorMessage(err, "Erreur lors de la suppression");
       setError(msg);
       throw err;
     } finally {

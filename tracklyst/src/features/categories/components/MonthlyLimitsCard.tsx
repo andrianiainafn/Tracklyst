@@ -1,7 +1,7 @@
 import { Colors, Radius } from "@/constants/theme";
 import { Card } from "@/src/components/ui/Card";
 import { formatCurrency } from "@/src/utils/currency";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import {
   ActivityIndicator,
@@ -16,6 +16,7 @@ import type {
   LimitStatus,
   MonthlySpending,
 } from "../hooks/useMonthlySpending";
+import { CategoryIcon } from "./CategoryIcon";
 
 const money = (n: number, currency: string) =>
   formatCurrency(Math.round(n), currency);
@@ -62,16 +63,13 @@ function LimitRow({
   c: typeof Colors.light;
 }) {
   const color = statusColor(item.status, c);
-  const catColor = item.category.color ?? "#6B7280";
 
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}
     >
-      <View style={[styles.rowIcon, { backgroundColor: catColor + "20" }]}>
-        <Text style={styles.rowEmoji}>{item.category.icon ?? "💸"}</Text>
-      </View>
+      <CategoryIcon category={item.category} size={40} />
       <View style={styles.rowBody}>
         <View style={styles.rowTop}>
           <Text style={[styles.rowName, { color: c.text }]} numberOfLines={1}>
@@ -156,7 +154,13 @@ export function MonthlyLimitsCard({
             pressed && { opacity: 0.8 },
           ]}
         >
-          <Text style={styles.emptyEmoji}>⛽ 📱 🧾</Text>
+          <View style={styles.emptyIcons}>
+            {(["gas-station-outline", "autorenew", "receipt-text-outline"] as const).map((name) => (
+              <View key={name} style={[styles.emptyIcon, { backgroundColor: c.surface }]}>
+                <MaterialCommunityIcons name={name} size={20} color={c.tint} />
+              </View>
+            ))}
+          </View>
           <Text style={[styles.emptyTitle, { color: c.text }]}>
             Fixez vos plafonds du mois
           </Text>
@@ -215,9 +219,7 @@ export function MonthlyLimitsCard({
             pressed && { opacity: 0.6 },
           ]}
         >
-          <View style={[styles.rowIcon, { backgroundColor: c.tintMuted }]}>
-            <Text style={styles.rowEmoji}>🐷</Text>
-          </View>
+          <CategoryIcon icon="piggy-bank-outline" color={c.tint} size={40} />
           <View style={{ flex: 1 }}>
             <Text style={[styles.rowName, { color: c.text }]}>Épargné ce mois-ci</Text>
             {data.saved <= 0 && (
@@ -267,7 +269,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  emptyEmoji: { fontSize: 22, letterSpacing: 4 },
+  emptyIcons: { flexDirection: "row", gap: 8, marginBottom: 4 },
+  emptyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   emptyTitle: { fontSize: 14, fontWeight: "700" },
   emptyText: { fontSize: 12, textAlign: "center", lineHeight: 17 },
 
@@ -277,14 +286,6 @@ const styles = StyleSheet.create({
 
   rows: { gap: 14 },
   row: { flexDirection: "row", gap: 12, alignItems: "flex-start" },
-  rowIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: Radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rowEmoji: { fontSize: 18 },
   rowBody: { flex: 1, gap: 6 },
   rowTop: {
     flexDirection: "row",

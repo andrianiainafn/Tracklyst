@@ -3,6 +3,7 @@ import { transactionService } from "@/src/features/transaction/services/transact
 import { useCallback, useEffect, useState } from "react";
 import { categoryService } from "../services/categoryService";
 import type { Category } from "../types/category.types";
+import { getErrorMessage } from "@/src/utils/errors";
 
 export type LimitStatus = "ok" | "warning" | "over";
 
@@ -121,7 +122,7 @@ export const useMonthlySpending = (budgetId?: string) => {
       setError(null);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Erreur de chargement du mois",
+        getErrorMessage(err, "Erreur de chargement du mois"),
       );
     } finally {
       setIsLoading(false);

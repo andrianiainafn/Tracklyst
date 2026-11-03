@@ -1,5 +1,5 @@
 import { Colors } from "@/constants/theme";
-import { IconSymbol } from "@/src/components/ui/icon-symbol.ios";
+import { IconSymbol } from "@/src/components/ui/icon-symbol";
 import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { Stack, useRouter } from "expo-router";
 import { Pressable } from "react-native";
@@ -66,6 +66,14 @@ export default function ModalLayout() {
       <Stack.Screen
         name="add-subscription"
         options={{ ...commonOptions, title: "Abonnement" }}
+      />
+      <Stack.Screen
+        name="categories"
+        options={{ ...commonOptions, title: "Catégories" }}
+      />
+      <Stack.Screen
+        name="category-form"
+        options={{ ...commonOptions, title: "Catégorie" }}
       />
       <Stack.Screen
         name="settings"

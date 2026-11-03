@@ -6,6 +6,7 @@ import { subscriptionService } from "../services/subscriptionService";
 import { useSubscriptionStore } from "../store/subscriptionStore";
 import type { Subscription } from "../types/subscription.types";
 import { monthlyCost, todayISO } from "../utils/schedule";
+import { getErrorMessage } from "@/src/utils/errors";
 
 /**
  * Abonnements du budget actif + échéances à valider (rappel, pas
@@ -34,7 +35,7 @@ export const useSubscriptions = () => {
       setSubscriptions(targetBudgetId, data);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Erreur de chargement des abonnements",
+        getErrorMessage(err, "Erreur de chargement des abonnements"),
       );
     }
   }, [targetBudgetId]);

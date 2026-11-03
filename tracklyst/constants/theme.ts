@@ -22,6 +22,9 @@ export const Colors = {
     danger: '#EF4444',
     dangerMuted: '#FEE2E2',
     warning: '#F59E0B',
+    // Séries de graphiques (validées daltonisme sur surface claire).
+    chartIncome: '#10B981',
+    chartExpense: '#EB6834',
     icon: '#64748B',
     tabIconDefault: '#94A3B8',
     tabIconSelected: '#10B981',
@@ -41,6 +44,9 @@ export const Colors = {
     danger: '#F87171',
     dangerMuted: '#450A0A',
     warning: '#FBBF24',
+    // Séries de graphiques (validées daltonisme sur surface sombre).
+    chartIncome: '#0E9F6E',
+    chartExpense: '#D95926',
     icon: '#94A3B8',
     tabIconDefault: '#64748B',
     tabIconSelected: '#34D399',

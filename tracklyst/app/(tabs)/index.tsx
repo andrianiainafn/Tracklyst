@@ -1,17 +1,25 @@
 import { Colors, Radius, Shadow } from "@/constants/theme";
-import { IconSymbol } from "@/src/components/ui/icon-symbol.ios";
+import { StatusBarScrim } from "@/src/components/ui/StatusBarScrim";
 import { Card } from "@/src/components/ui/Card";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { useActiveBudget } from "@/src/features/budgets/hooks/useActiveBudget";
 import { useBudgets } from "@/src/features/budgets/hooks/useBudgets";
+import { BudgetSwitcherSheet } from "@/src/features/budgets/components/BudgetSwitcherSheet";
 import { budgetService } from "@/src/features/budgets/services/budgetService";
+import { CashflowChart } from "@/src/features/dashboard/components/CashflowChart";
+import { CategoryBreakdown } from "@/src/features/dashboard/components/CategoryBreakdown";
+import { MonthKpis } from "@/src/features/dashboard/components/MonthKpis";
+import { useDashboardStats } from "@/src/features/dashboard/hooks/useDashboardStats";
 import { MonthlyLimitsCard } from "@/src/features/categories/components/MonthlyLimitsCard";
 import { useMonthlySpending } from "@/src/features/categories/hooks/useMonthlySpending";
 import { SubscriptionsCard } from "@/src/features/subscriptions/components/SubscriptionsCard";
 import { useSubscriptions } from "@/src/features/subscriptions/hooks/useSubscriptions";
 import type { Subscription } from "@/src/features/subscriptions/types/subscription.types";
 import { resolveBudgetTheme } from "@/src/features/budgets/constants/budgetThemes";
-import type { Budget } from "@/src/features/budgets/types/budget.types";
+import { useGoals } from "@/src/features/goals/hooks/useGoals";
+import { useReminderSync } from "@/src/features/notifications/hooks/useReminderSync";
+import { PrivacyToggle } from "@/src/features/privacy/components/PrivacyToggle";
+import { usePrivacyStore } from "@/src/features/privacy/store/privacyStore";
 import { goalService } from "@/src/features/goals/services/goalService";
 import { transactionService } from "@/src/features/transaction/services/transactionService";
 import { getCurrencySymbol } from "@/src/utils/currency";
@@ -36,13 +44,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const fmt = (n: number) =>
   new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n);
 
-// ─── Extended Budget type (aggregated fields from future joins) ───────────────
-type BudgetWithStats = Budget & {
-  initial_amount?: number;
-  totalIncome?: number;
-  totalExpense?: number;
-};
-
 // ─── Stats par budget (un seul budget = une seule entrée) ─────────────────────
 type BudgetStats = {
   totalIncome: number;
@@ -52,181 +53,6 @@ type BudgetStats = {
   transactionsCount: number;
 };
 
-// ─── Budget Card ──────────────────────────────────────────────────────────────
-function BudgetCard({
-  budget,
-  onPress,
-  isActive,
-  stats,
-  isDark,
-}: {
-  budget: BudgetWithStats;
-  onPress: () => void;
-  isActive: boolean;
-  stats: BudgetStats | null;
-  isDark: boolean;
-}) {
-  const c = isDark ? Colors.dark : Colors.light;
-  const theme = resolveBudgetTheme(budget);
-
-  const initialAmount = Number(budget.initial_amount ?? 0);
-  const totalIncome = stats?.totalIncome ?? 0;
-  const totalExpense = stats?.totalExpense ?? 0;
-  const goalsCount = stats?.goalsCount ?? 0;
-  const balance = stats?.available_balance ?? 0;
-
-  const totalAvailable = initialAmount + totalIncome;
-  const pct =
-    totalAvailable > 0
-      ? Math.min((totalExpense / totalAvailable) * 100, 100)
-      : 0;
-
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const onPressIn = () =>
-    Animated.spring(scaleAnim, { toValue: 0.98, useNativeDriver: true }).start();
-  const onPressOut = () =>
-    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
-
-  const showInitial = initialAmount > 0 && totalIncome === 0;
-
-  return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <Pressable
-        onPress={onPress}
-        onPressIn={onPressIn}
-        onPressOut={onPressOut}
-        style={[
-          styles.budgetCard,
-          {
-            backgroundColor: c.surface,
-            borderColor: isActive ? c.tint : c.border,
-            borderWidth: isActive ? 1.5 : 1,
-          },
-          Shadow.sm,
-        ]}
-      >
-        {/* Header */}
-        <View style={styles.cardHeader}>
-          <View style={styles.cardTitleRow}>
-            <View style={[styles.cardDot, { backgroundColor: theme.to }]} />
-            <Text style={[styles.cardName, { color: c.text }]} numberOfLines={1}>
-              {budget.name}
-            </Text>
-          </View>
-          <View style={[styles.cardBadge, { backgroundColor: c.surfaceAlt }]}>
-            <Text style={[styles.cardBadgeText, { color: c.textMuted }]}>
-              {budget.currency}
-            </Text>
-          </View>
-        </View>
-
-        {/* Balance */}
-        <Text style={[styles.cardBalanceLabel, { color: c.textSubtle }]}>
-          Solde disponible
-        </Text>
-        <Text style={[styles.cardBalance, { color: c.text }]}>
-          {fmt(balance)}
-          <Text style={[styles.cardCurrency, { color: c.textMuted }]}>
-            {" "}
-            {getCurrencySymbol(budget.currency)}
-          </Text>
-        </Text>
-
-        {/* Progress bar */}
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBg, { backgroundColor: c.surfaceAlt }]}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: `${pct}%` as any,
-                  backgroundColor: pct > 80 ? c.danger : c.tint,
-                },
-              ]}
-            />
-          </View>
-          <Text style={[styles.progressLabel, { color: c.textSubtle }]}>
-            {Math.round(pct)}% dépensé
-          </Text>
-        </View>
-
-        {/* Stats row */}
-        <View style={[styles.cardStats, { backgroundColor: c.surfaceAlt }]}>
-          {showInitial ? (
-            <>
-              <CardStat icon="banknote" label="Initial" value={fmt(initialAmount)} c={c} />
-              <View style={[styles.cardStatDivider, { backgroundColor: c.border }]} />
-              <CardStat icon="arrow.up.circle.fill" label="Dépenses" value={`-${fmt(totalExpense)}`} c={c} tone="danger" />
-              <View style={[styles.cardStatDivider, { backgroundColor: c.border }]} />
-              <CardStat icon="target" label="Objectifs" value={`${goalsCount}`} c={c} />
-            </>
-          ) : (
-            <>
-              <CardStat icon="arrow.down.circle.fill" label="Revenus" value={`+${fmt(initialAmount + totalIncome)}`} c={c} tone="accent" />
-              <View style={[styles.cardStatDivider, { backgroundColor: c.border }]} />
-              <CardStat icon="arrow.up.circle.fill" label="Dépenses" value={`-${fmt(totalExpense)}`} c={c} tone="danger" />
-              <View style={[styles.cardStatDivider, { backgroundColor: c.border }]} />
-              <CardStat icon="target" label="Objectifs" value={`${goalsCount}`} c={c} />
-            </>
-          )}
-        </View>
-      </Pressable>
-    </Animated.View>
-  );
-}
-
-function CardStat({
-  icon,
-  label,
-  value,
-  c,
-  tone,
-}: {
-  icon: string;
-  label: string;
-  value: string;
-  c: typeof Colors.light;
-  tone?: "accent" | "danger";
-}) {
-  const color = tone === "accent" ? c.tint : tone === "danger" ? c.danger : c.textMuted;
-  return (
-    <View style={styles.cardStatItem}>
-      <IconSymbol name={icon as any} size={13} color={color} />
-      <Text style={[styles.cardStatValue, { color: c.text }]}>{value}</Text>
-      <Text style={[styles.cardStatLabel, { color: c.textSubtle }]}>{label}</Text>
-    </View>
-  );
-}
-
-// ─── Quick Stat Pill ──────────────────────────────────────────────────────────
-function StatPill({
-  icon,
-  label,
-  value,
-  tone,
-  isDark,
-}: {
-  icon: string;
-  label: string;
-  value: string;
-  tone?: "accent" | "danger";
-  isDark: boolean;
-}) {
-  const c = isDark ? Colors.dark : Colors.light;
-  const color = tone === "accent" ? c.tint : tone === "danger" ? c.danger : c.textMuted;
-  return (
-    <Card padding={12} style={styles.statPill}>
-      <View style={[styles.statPillIcon, { backgroundColor: c.surfaceAlt }]}>
-        <IconSymbol name={icon as any} size={16} color={color} />
-      </View>
-      <View>
-        <Text style={[styles.statPillValue, { color: c.text }]}>{value}</Text>
-        <Text style={[styles.statPillLabel, { color: c.textSubtle }]}>{label}</Text>
-      </View>
-    </Card>
-  );
-}
-
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const isDark = useColorScheme() === "dark";
@@ -235,12 +61,17 @@ export default function HomeScreen() {
 
   const { budgets, isLoading, error, refresh } = useBudgets();
   const { activeBudget, balance, switchBudget } = useActiveBudget();
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const { hidden, toggle: toggleHidden } = usePrivacyStore();
   const router = useRouter();
   const {
     data: monthly,
     isLoading: monthlyLoading,
     refresh: refreshMonthly,
   } = useMonthlySpending(activeBudget?.id);
+  const { data: dashboard, refresh: refreshDashboard } = useDashboardStats(
+    activeBudget?.id,
+  );
   const {
     due: dueSubscriptions,
     active: activeSubscriptions,
@@ -249,6 +80,14 @@ export default function HomeScreen() {
     confirm: confirmSubscription,
     skip: skipSubscription,
   } = useSubscriptions();
+
+  const { goals } = useGoals();
+  useReminderSync({
+    budget: activeBudget,
+    subscriptions: activeSubscriptions,
+    goals,
+    monthly,
+  });
 
   // ── Cache des stats par budget : chaque carte lit UNIQUEMENT sa propre entrée ──
   const [budgetStatsMap, setBudgetStatsMap] = useState<
@@ -300,7 +139,8 @@ export default function HomeScreen() {
       if (budgets.length > 0) loadStatsForAllBudgets();
       refreshMonthly();
       refreshSubscriptions();
-    }, [budgets.length, loadStatsForAllBudgets, refreshMonthly, refreshSubscriptions])
+      refreshDashboard();
+    }, [budgets.length, loadStatsForAllBudgets, refreshMonthly, refreshSubscriptions, refreshDashboard])
   );
 
   // Stats du budget actif (pour le hero + pills)
@@ -309,32 +149,19 @@ export default function HomeScreen() {
     : null;
 
   const totalBalance = activeStats?.available_balance ?? balance?.available_balance ?? 0;
-  const totalIncome = activeStats?.totalIncome ?? 0;
-  const totalExpense = activeStats?.totalExpense ?? 0;
-  const totalTx = activeStats?.transactionsCount ?? 0;
 
-  // Objectifs : agrégés depuis les stats chargées pour chaque budget
-  const totalGoals = budgets.reduce(
-    (acc, b) => acc + (budgetStatsMap[b.id]?.goalsCount ?? 0),
-    0,
-  );
 
   // Une échéance validée devient une dépense : stats et plafonds à jour.
   const handleConfirmSubscription = async (sub: Subscription) => {
     await confirmSubscription(sub);
-    await Promise.all([loadStatsForAllBudgets(), refreshMonthly()]);
+    await Promise.all([loadStatsForAllBudgets(), refreshMonthly(), refreshDashboard()]);
   };
 
-  const handleBudgetPress = (budget: Budget) => {
-    switchBudget(budget);
-  };
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
       <StatusBar
         barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor="transparent"
-        translucent
       />
 
       <ScrollView
@@ -352,6 +179,7 @@ export default function HomeScreen() {
                 loadStatsForAllBudgets(),
                 refreshMonthly(),
                 refreshSubscriptions(),
+                refreshDashboard(),
               ]);
             }}
             tintColor={c.tint}
@@ -361,34 +189,57 @@ export default function HomeScreen() {
         {/* ── Header ── */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={[styles.greet, { color: c.text }]}>Bonjour 👋</Text>
+            <Text style={[styles.greet, { color: c.text }]}>Bonjour</Text>
             <Text style={[styles.greetSub, { color: c.textMuted }]}>
               Voici vos finances
             </Text>
           </View>
-          <View style={[styles.headerBadge, { backgroundColor: c.surfaceAlt }]}>
-            <Text style={[styles.headerBadgeText, { color: c.textMuted }]}>
-              {budgets.length} budget{budgets.length !== 1 ? "s" : ""}
-            </Text>
-          </View>
         </View>
 
-        {/* ── Balance hero (neutral) ── */}
-        <Card style={styles.balanceCard} padding={20}>
-          <Text style={[styles.balanceLabel, { color: c.textSubtle }]}>
-            SOLDE DISPONIBLE
-          </Text>
-          {isLoading && budgets.length === 0 ? (
-            <ActivityIndicator color={c.tint} style={{ marginTop: 8 }} />
-          ) : (
-            <Text style={[styles.balanceAmount, { color: c.text }]}>
-              {fmt(totalBalance)}{" "}
-              <Text style={{ color: c.textMuted, fontSize: 20, fontWeight: "700" }}>
-                {getCurrencySymbol(activeBudget?.currency)}
-              </Text>
+        {/* ── Solde du budget actif ── */}
+        {activeBudget && (
+          <Card style={styles.balanceCard} padding={18}>
+            <View style={styles.balanceTop}>
+              <Pressable
+                onPress={() => setSwitcherOpen(true)}
+                hitSlop={6}
+                style={({ pressed }) => [
+                  styles.budgetPill,
+                  { backgroundColor: c.surfaceAlt },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <View style={[styles.budgetDot, { backgroundColor: resolveBudgetTheme(activeBudget).to }]} />
+                <Text style={[styles.budgetPillText, { color: c.text }]} numberOfLines={1}>
+                  {activeBudget.name}
+                </Text>
+                <Ionicons name="chevron-down" size={16} color={c.textMuted} />
+              </Pressable>
+              <PrivacyToggle />
+            </View>
+
+            <Text style={[styles.balanceLabel, { color: c.textSubtle }]}>
+              SOLDE DISPONIBLE
             </Text>
-          )}
-        </Card>
+            {isLoading && budgets.length === 0 ? (
+              <ActivityIndicator color={c.tint} style={{ marginTop: 8, alignSelf: "flex-start" }} />
+            ) : (
+              <Pressable onPress={toggleHidden} hitSlop={6}>
+                <Text style={[styles.balanceAmount, { color: c.text }]}>
+                  {hidden ? "•••••••" : fmt(totalBalance)}{" "}
+                  <Text style={{ color: c.textMuted, fontSize: 20, fontWeight: "700" }}>
+                    {getCurrencySymbol(activeBudget.currency)}
+                  </Text>
+                </Text>
+              </Pressable>
+            )}
+            {budgets.length > 1 && (
+              <Text style={[styles.balanceHint, { color: c.textSubtle }]}>
+                {budgets.length} budgets · touchez le nom pour changer
+              </Text>
+            )}
+          </Card>
+        )}
 
         {/* Error */}
         {error && (
@@ -398,42 +249,14 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Stats pills */}
-        <Text style={[styles.sectionTitle, { color: c.textSubtle }]}>
-          VUE D'ENSEMBLE
-        </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.pillsRow}
-        >
-          <StatPill
-            icon="arrow.down.circle.fill"
-            label="Revenus totaux"
-            value={`${fmt(totalIncome)} ${getCurrencySymbol(activeBudget?.currency)}`}
-            tone="accent"
-            isDark={isDark}
+        {/* Indicateurs du mois */}
+        {dashboard && activeBudget && (
+          <MonthKpis
+            current={dashboard.current}
+            previous={dashboard.previous}
+            currency={activeBudget.currency}
           />
-          <StatPill
-            icon="arrow.up.circle.fill"
-            label="Dépenses totales"
-            value={`${fmt(totalExpense)} ${getCurrencySymbol(activeBudget?.currency)}`}
-            tone="danger"
-            isDark={isDark}
-          />
-          <StatPill
-            icon="list.bullet.rectangle"
-            label="Transactions"
-            value={`${totalTx}`}
-            isDark={isDark}
-          />
-          <StatPill
-            icon="target"
-            label="Objectifs actifs"
-            value={`${totalGoals}`}
-            isDark={isDark}
-          />
-        </ScrollView>
+        )}
 
         {/* Plafonds du mois (budget actif) */}
         {activeBudget && (
@@ -472,10 +295,21 @@ export default function HomeScreen() {
           </>
         )}
 
-        {/* Budget cards */}
-        <Text style={[styles.sectionTitle, { color: c.textSubtle, marginTop: 8 }]}>
-          MES BUDGETS
-        </Text>
+        {/* Analyse */}
+        {dashboard && activeBudget && (
+          <>
+            <Text style={[styles.sectionTitle, { color: c.textSubtle, marginTop: 8 }]}>
+              ANALYSE
+            </Text>
+            <CashflowChart months={dashboard.months} currency={activeBudget.currency} />
+            <CategoryBreakdown
+              categories={dashboard.byCategory}
+              total={dashboard.current.expense}
+              monthLabel={dashboard.current.longLabel}
+              currency={activeBudget.currency}
+            />
+          </>
+        )}
 
         {isLoading && budgets.length === 0 && (
           <Card style={styles.skeletonCard}>
@@ -486,27 +320,35 @@ export default function HomeScreen() {
           </Card>
         )}
 
-        <View style={styles.cardsStack}>
-          {budgets.map((budget) => (
-            <BudgetCard
-              key={budget.id}
-              budget={budget as BudgetWithStats}
-              onPress={() => handleBudgetPress(budget)}
-              isActive={activeBudget?.id === budget.id}
-              stats={budgetStatsMap[budget.id] ?? null}
-              isDark={isDark}
-            />
-          ))}
-
-          {!isLoading && budgets.length === 0 && (
-            <EmptyState
-              icon="file-tray-outline"
-              title="Aucun budget"
-              subtitle="Créez votre premier budget en appuyant sur +"
-            />
-          )}
-        </View>
+        {!isLoading && budgets.length === 0 && (
+          <EmptyState
+            icon="wallet-outline"
+            title="Aucun budget"
+            subtitle="Créez votre premier budget pour commencer à suivre vos finances."
+            actionLabel="Créer un budget"
+            onAction={() => router.push("/(modal)/add_budget")}
+          />
+        )}
       </ScrollView>
+      <StatusBarScrim />
+
+      <BudgetSwitcherSheet
+        visible={switcherOpen}
+        budgets={budgets}
+        activeId={activeBudget?.id}
+        balances={Object.fromEntries(
+          Object.entries(budgetStatsMap).map(([id, st]) => [id, st.available_balance]),
+        )}
+        onSelect={(b) => {
+          switchBudget(b);
+          setSwitcherOpen(false);
+        }}
+        onCreate={() => {
+          setSwitcherOpen(false);
+          router.push("/(modal)/add_budget");
+        }}
+        onClose={() => setSwitcherOpen(false)}
+      />
 
       <FAB isDark={isDark} />
     </View>
@@ -535,7 +377,7 @@ function FAB({ isDark }: { isDark: boolean }) {
       <Pressable
         onPressIn={onPressIn}
         onPressOut={onPressOut}
-        onPress={() => router.push("/(modal)/add_budget")}
+        onPress={() => router.push("/(modal)/add-transaction")}
         style={[styles.fab, { backgroundColor: c.tint }]}
       >
         <Ionicons name="add" size={24} color="#fff" />
@@ -557,14 +399,28 @@ const styles = StyleSheet.create({
   },
   greet: { fontSize: 22, fontWeight: "800", letterSpacing: -0.5 },
   greetSub: { fontSize: 13, marginTop: 2 },
-  headerBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: Radius.pill,
-  },
-  headerBadgeText: { fontSize: 12, fontWeight: "600" },
 
   balanceCard: { marginBottom: 4 },
+  balanceTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+    gap: 12,
+  },
+  budgetPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingLeft: 12,
+    paddingRight: 10,
+    paddingVertical: 8,
+    borderRadius: Radius.pill,
+    flexShrink: 1,
+  },
+  budgetDot: { width: 10, height: 10, borderRadius: 5 },
+  budgetPillText: { fontSize: 14, fontWeight: "700", flexShrink: 1 },
+  balanceHint: { fontSize: 12, marginTop: 8 },
   balanceLabel: {
     fontSize: 11,
     fontWeight: "700",
@@ -584,72 +440,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 
-  pillsRow: { gap: 10, paddingRight: 16 },
-  statPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    minWidth: 160,
-  },
-  statPillIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: Radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statPillValue: { fontSize: 14, fontWeight: "700" },
-  statPillLabel: { fontSize: 11, marginTop: 1 },
-
-  cardsStack: { gap: 12 },
-  budgetCard: {
-    borderRadius: Radius.xl,
-    padding: 18,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  cardTitleRow: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
-  cardDot: { width: 8, height: 8, borderRadius: 4 },
-  cardName: { fontSize: 15, fontWeight: "700", flex: 1 },
-  cardBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.sm },
-  cardBadgeText: { fontSize: 11, fontWeight: "700" },
-  cardBalanceLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
-  cardBalance: {
-    fontSize: 30,
-    fontWeight: "800",
-    letterSpacing: -1,
-    marginTop: 4,
-    marginBottom: 14,
-  },
-  cardCurrency: { fontSize: 16, fontWeight: "600" },
-
-  progressContainer: { marginBottom: 14, gap: 6 },
-  progressBg: {
-    height: 5,
-    borderRadius: 3,
-    overflow: "hidden",
-  },
-  progressFill: { height: "100%", borderRadius: 3 },
-  progressLabel: { fontSize: 11, fontWeight: "500" },
-
-  cardStats: {
-    flexDirection: "row",
-    borderRadius: Radius.md,
-    padding: 12,
-  },
-  cardStatItem: { flex: 1, alignItems: "center", gap: 3 },
-  cardStatDivider: { width: 1, marginVertical: 2 },
-  cardStatValue: { fontSize: 12, fontWeight: "700" },
-  cardStatLabel: { fontSize: 10 },
 
   errorBanner: {
     flexDirection: "row",

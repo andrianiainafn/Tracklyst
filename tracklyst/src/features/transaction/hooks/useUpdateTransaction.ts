@@ -4,6 +4,7 @@ import { useBudgetStore } from '../../budgets/store/budgetStore';
 import { transactionService } from '../services/transactionService';
 import { useTransactionStore } from '../store/transactionStore';
 import type { UpdateTransactionDTO } from '../types/transaction.types';
+import { getErrorMessage } from "@/src/utils/errors";
 
 /**
  * Hook for updating a transaction with optimistic update.
@@ -42,7 +43,7 @@ export const useUpdateTransaction = () => {
       // Rollback
       useTransactionStore.getState().setTransactions(snapshot);
       const msg =
-        err instanceof Error ? err.message : 'Erreur de mise à jour';
+        getErrorMessage(err, 'Erreur de mise à jour');
       setError(msg);
       throw err;
     } finally {

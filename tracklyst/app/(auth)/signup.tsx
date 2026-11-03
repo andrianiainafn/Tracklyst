@@ -7,6 +7,7 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -114,9 +115,7 @@ export default function SignupScreen() {
           >
             <Feather name="arrow-left" size={20} color={c.textMuted} />
           </TouchableOpacity>
-          <View style={[styles.logoMark, { backgroundColor: c.tint }]}>
-            <Feather name="activity" size={22} color="#fff" />
-          </View>
+          <Image source={require("@/src/assets/images/logo.png")} style={styles.logoMark} />
           <Text style={[styles.title, { color: c.text }]}>Créer un compte</Text>
           <Text style={[styles.subtitle, { color: c.textSubtle }]}>
             Commencez à suivre vos finances
@@ -285,14 +284,7 @@ const styles = StyleSheet.create({
 
   header: { alignItems: "center", marginBottom: 28 },
   backButton: { position: "absolute", left: 0, top: 0, padding: 8 },
-  logoMark: {
-    width: 54,
-    height: 54,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
+  logoMark: { width: 54, height: 54, marginBottom: 14 },
   title: { fontSize: 24, fontWeight: "800", letterSpacing: -0.4 },
   subtitle: { fontSize: 13, marginTop: 3 },
 

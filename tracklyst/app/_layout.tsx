@@ -10,6 +10,7 @@ import {
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
+import * as Notifications from "expo-notifications";
 import { Linking } from "react-native";
 import "react-native-reanimated";
 import "react-native-url-polyfill/auto";
@@ -35,6 +36,19 @@ function AuthGuard() {
       router.replace("/(tabs)");
     }
   }, [isAuthenticated, isInitialized, segments]);
+
+  return null;
+}
+
+/** Tap sur une notification → ouvre l'écran concerné (data.url). */
+function NotificationTapHandler() {
+  const router = useRouter();
+  const response = Notifications.useLastNotificationResponse();
+
+  useEffect(() => {
+    const url = response?.notification.request.content.data?.url;
+    if (typeof url === "string") router.push(url as any);
+  }, [response]);
 
   return null;
 }
@@ -74,10 +88,8 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <AuthGuard />
       <DeepLinkHandler />
-      <Stack
-        screenOptions={{ headerShown: false }}
-        initialRouteName="splashScreen"
-      >
+      <NotificationTapHandler />
+      <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="splashScreen" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />

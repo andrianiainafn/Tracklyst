@@ -1,6 +1,7 @@
 import { Colors, Radius } from "@/constants/theme";
 import { Button } from "@/src/components/ui/Button";
 import { useBudgetStore } from "@/src/features/budgets/store/budgetStore";
+import { CategoryIcon } from "@/src/features/categories/components/CategoryIcon";
 import { categoryService } from "@/src/features/categories/services/categoryService";
 import { useCategoryStore } from "@/src/features/categories/store/categoryStore";
 import type { Category } from "@/src/features/categories/types/category.types";
@@ -130,7 +131,6 @@ export default function MonthlyLimitsScreen() {
         ) : (
           <View style={[styles.list, { backgroundColor: c.surface, borderColor: c.border }]}>
             {categories.map((cat, i) => {
-              const color = cat.color ?? "#6B7280";
               const hasValue = !!parseLimit(values[cat.id] ?? "");
               return (
                 <View
@@ -140,9 +140,7 @@ export default function MonthlyLimitsScreen() {
                     i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
                   ]}
                 >
-                  <View style={[styles.icon, { backgroundColor: color + "20" }]}>
-                    <Text style={styles.emoji}>{cat.icon ?? "💸"}</Text>
-                  </View>
+                  <CategoryIcon category={cat} size={38} />
                   <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>
                     {cat.name}
                   </Text>
@@ -198,14 +196,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  icon: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emoji: { fontSize: 17 },
   name: { flex: 1, fontSize: 14, fontWeight: "600" },
   inputWrap: {
     flexDirection: "row",

@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { authService } from "../services/authService";
 import { useAuthStore } from "../store/authStore";
+import { getErrorMessage } from "@/src/utils/errors";
 
 export const useSignup = () => {
   const { setSession, setLoading, setError, isLoading, error } = useAuthStore();
@@ -34,7 +35,7 @@ export const useSignup = () => {
         return true;
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Signup failed";
+      const message = getErrorMessage(err, "Signup failed");
       setError(message);
       return false;
     } finally {
@@ -51,7 +52,7 @@ export const useSignup = () => {
       return !!session;
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "OAuth signup failed";
+        getErrorMessage(err, "OAuth signup failed");
       setError(message);
       return false;
     } finally {

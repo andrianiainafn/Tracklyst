@@ -4,6 +4,7 @@ import { formatCurrency } from "@/src/utils/currency";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { CategoryIcon } from "@/src/features/categories/components/CategoryIcon";
 import type { Subscription } from "../types/subscription.types";
 import { DueSubscriptionRow } from "./DueSubscriptionRow";
 
@@ -57,9 +58,7 @@ export function SubscriptionsCard({
         onPress={onOpen}
         style={({ pressed }) => [styles.summary, pressed && { opacity: 0.6 }]}
       >
-        <View style={[styles.summaryIcon, { backgroundColor: "#8B5CF620" }]}>
-          <Text style={{ fontSize: 18 }}>📱</Text>
-        </View>
+        <CategoryIcon icon="autorenew" color="#8B5CF6" size={40} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.summaryTitle, { color: c.text }]}>Abonnements</Text>
           <Text style={[styles.summaryMeta, { color: c.textMuted }]}>
@@ -84,13 +83,6 @@ const styles = StyleSheet.create({
   dueHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
   dueTitle: { fontSize: 13, fontWeight: "700" },
   summary: { flexDirection: "row", alignItems: "center", gap: 12 },
-  summaryIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: Radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   summaryTitle: { fontSize: 14, fontWeight: "700" },
   summaryMeta: { fontSize: 12, marginTop: 2 },
 });

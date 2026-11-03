@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { budgetService } from '../services/budgetService';
 import { useBudgetStore } from '../store/budgetStore';
 import type { Budget } from '../types/budget.types';
+import { getErrorMessage } from "@/src/utils/errors";
 
 /**
  * Hook focused on the currently active budget.
@@ -24,7 +25,7 @@ export const useActiveBudget = () => {
         setBalance(data);
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : 'Erreur de calcul du solde'
+          getErrorMessage(err, 'Erreur de calcul du solde')
         );
       }
     };

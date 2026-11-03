@@ -18,3 +18,5 @@ export interface CreateCategoryDTO {
   icon?: string;
   color?: string;
 }
+
+export type UpdateCategoryDTO = Partial<Pick<Category, "name" | "icon" | "color">>;

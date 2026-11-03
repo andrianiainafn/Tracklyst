@@ -1,6 +1,6 @@
 import { Colors, Radius } from "@/constants/theme";
 import { Button } from "@/src/components/ui/Button";
-import { IconSymbol } from "@/src/components/ui/icon-symbol.ios";
+import { IconSymbol } from "@/src/components/ui/icon-symbol";
 import { Input } from "@/src/components/ui/Input";
 import { useBudgets } from "@/src/features/budgets/hooks/useBudgets";
 import { useBudgetStore } from "@/src/features/budgets/store/budgetStore";
@@ -12,7 +12,8 @@ import { formatDate } from "@/src/utils/date";
 import DateTimePicker, {
   DateTimePickerAndroid,
 } from "@react-native-community/datetimepicker";
-import { useRouter } from "expo-router";
+import { getErrorMessage } from "@/src/utils/errors";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -32,11 +33,19 @@ export default function AddGoal() {
   const isDark = useColorScheme() === "dark";
   const c = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
+  const navigation = useNavigation();
   const { bottom } = useSafeAreaInsets();
+  const { id } = useLocalSearchParams<{ id?: string }>();
 
   const { budgets } = useBudgets();
   const { activeBudget } = useBudgetStore();
-  const { addGoal } = useGoalStore();
+  const { goals, addGoal, updateGoal, deleteGoal } = useGoalStore();
+  const existing = id ? goals.find((g) => g.id === id) : undefined;
+  const isEditing = !!existing;
+
+  useEffect(() => {
+    if (isEditing) navigation.setOptions({ title: "Modifier l'objectif" });
+  }, [isEditing]);
 
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(
     activeBudget ?? budgets[0] ?? null,
@@ -50,10 +59,12 @@ export default function AddGoal() {
     if (!selectedBudget && budgets.length > 0) setSelectedBudget(budgets[0]);
   }, [budgets]);
 
-  const [name, setName] = useState("");
-  const [amountRaw, setAmountRaw] = useState("");
-  const [description, setDescription] = useState("");
-  const [deadline, setDeadline] = useState<string | null>(null);
+  const [name, setName] = useState(existing?.name ?? "");
+  const [amountRaw, setAmountRaw] = useState(
+    existing ? String(Number(existing.target_amount)) : "",
+  );
+  const [description, setDescription] = useState(existing?.description ?? "");
+  const [deadline, setDeadline] = useState<string | null>(existing?.deadline ?? null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -92,6 +103,26 @@ export default function AddGoal() {
     if (!canSubmit || !selectedBudget) return;
     try {
       setIsLoading(true);
+      if (existing) {
+        const current = Number(existing.current_amount);
+        // La cible peut passer sous / au-dessus de l'épargne déjà faite.
+        const status =
+          existing.status === "completed" || existing.status === "in_progress"
+            ? current >= amount
+              ? "completed"
+              : "in_progress"
+            : existing.status;
+        const updated = await goalService.updateGoal(existing.id, {
+          name: name.trim(),
+          target_amount: amount,
+          description: description.trim() || null,
+          deadline,
+          status,
+        });
+        updateGoal(existing.id, updated);
+        router.back();
+        return;
+      }
       const created = await goalService.createGoal({
         budget_id: selectedBudget.id,
         name: name.trim(),
@@ -121,7 +152,37 @@ export default function AddGoal() {
     deadline,
     activeBudget?.id,
     addGoal,
+    existing,
+    updateGoal,
   ]);
+
+  const handleDelete = () => {
+    if (!existing) return;
+    const saved = Number(existing.current_amount);
+    Alert.alert(
+      `Supprimer « ${existing.name} » ?`,
+      saved > 0
+        ? `Les ${formatCurrency(saved, selectedBudget?.currency)} épargnés redeviendront disponibles dans le budget.`
+        : "Cette action est irréversible.",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await goalService.deleteGoal(existing.id);
+              deleteGoal(existing.id);
+              // Ferme l'édition et l'écran de mouvement de l'objectif supprimé.
+              router.dismissAll();
+            } catch (e) {
+              Alert.alert("Erreur", getErrorMessage(e, "Impossible de supprimer l'objectif."));
+            }
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <>
@@ -136,7 +197,7 @@ export default function AddGoal() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Budget sélectionné */}
-          {budgets.length > 0 && (
+          {budgets.length > 0 && !isEditing && (
             <View style={styles.section}>
               <Text style={[styles.label, { color: c.textMuted }]}>Budget</Text>
               <ScrollView
@@ -258,11 +319,20 @@ export default function AddGoal() {
             style={styles.textarea}
           />
 
+          {isEditing && Number(existing.current_amount) > 0 && (
+            <Text style={[styles.amountPretty, { color: c.textMuted }]}>
+              Déjà épargné : {formatCurrency(Number(existing.current_amount), selectedBudget?.currency)}
+              {amount > 0 && Number(existing.current_amount) >= amount ? " · l'objectif sera marqué atteint" : ""}
+            </Text>
+          )}
+
           <Button
             label={
-              amount > 0
-                ? `Créer l'objectif · ${formatCurrency(amount, selectedBudget?.currency)}`
-                : "Créer l'objectif"
+              isEditing
+                ? "Enregistrer les modifications"
+                : amount > 0
+                  ? `Créer l'objectif · ${formatCurrency(amount, selectedBudget?.currency)}`
+                  : "Créer l'objectif"
             }
             onPress={handleSubmit}
             disabled={!canSubmit}
@@ -270,6 +340,9 @@ export default function AddGoal() {
             icon={<IconSymbol name="checkmark.circle.fill" size={20} color="#fff" />}
             style={{ marginTop: 8 }}
           />
+          {isEditing && (
+            <Button label="Supprimer l'objectif" variant="destructive" onPress={handleDelete} />
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </>

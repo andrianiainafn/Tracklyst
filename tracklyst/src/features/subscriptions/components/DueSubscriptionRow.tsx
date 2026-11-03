@@ -11,6 +11,8 @@ import {
   View,
   useColorScheme,
 } from "react-native";
+import { CategoryIcon } from "@/src/features/categories/components/CategoryIcon";
+import { iconForLabel } from "@/src/features/categories/constants/categoryIcons";
 import type { Subscription } from "../types/subscription.types";
 import { daysUntil } from "../utils/schedule";
 
@@ -39,7 +41,6 @@ export function DueSubscriptionRow({
   const isDark = useColorScheme() === "dark";
   const c = isDark ? Colors.dark : Colors.light;
   const [busy, setBusy] = useState<"confirm" | "skip" | null>(null);
-  const color = sub.category?.color ?? "#8B5CF6";
   const late = daysUntil(sub.next_occurrence) < 0;
 
   const run = async (action: "confirm" | "skip") => {
@@ -55,9 +56,7 @@ export function DueSubscriptionRow({
 
   return (
     <View style={[styles.row, { backgroundColor: c.surfaceAlt }]}>
-      <View style={[styles.icon, { backgroundColor: color + "25" }]}>
-        <Text style={styles.emoji}>{sub.category?.icon ?? "📱"}</Text>
-      </View>
+      <CategoryIcon category={sub.category} icon={iconForLabel(sub.description)} size={38} />
       <View style={styles.body}>
         <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>
           {sub.description ?? sub.category?.name ?? "Abonnement"}
@@ -102,14 +101,6 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: Radius.md,
   },
-  icon: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emoji: { fontSize: 17 },
   body: { flex: 1 },
   name: { fontSize: 14, fontWeight: "700" },
   meta: { fontSize: 12, marginTop: 2 },

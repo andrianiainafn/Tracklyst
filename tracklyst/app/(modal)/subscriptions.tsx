@@ -3,6 +3,8 @@ import { Button } from "@/src/components/ui/Button";
 import { Card } from "@/src/components/ui/Card";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { useBudgetStore } from "@/src/features/budgets/store/budgetStore";
+import { CategoryIcon } from "@/src/features/categories/components/CategoryIcon";
+import { iconForLabel } from "@/src/features/categories/constants/categoryIcons";
 import { DueSubscriptionRow } from "@/src/features/subscriptions/components/DueSubscriptionRow";
 import { useSubscriptions } from "@/src/features/subscriptions/hooks/useSubscriptions";
 import type { Subscription } from "@/src/features/subscriptions/types/subscription.types";
@@ -48,15 +50,12 @@ function SubscriptionRow({
   onPress: () => void;
   c: typeof Colors.light;
 }) {
-  const color = sub.category?.color ?? "#8B5CF6";
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }, !sub.is_active && { opacity: 0.5 }]}
     >
-      <View style={[styles.icon, { backgroundColor: color + "20" }]}>
-        <Text style={styles.emoji}>{sub.category?.icon ?? "📱"}</Text>
-      </View>
+      <CategoryIcon category={sub.category} icon={iconForLabel(sub.description)} size={40} />
       <View style={{ flex: 1 }}>
         <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>
           {sub.description ?? sub.category?.name}
@@ -81,7 +80,7 @@ export default function SubscriptionsScreen() {
   const { activeBudget } = useBudgetStore();
   const { subscriptions, due, active, monthlyTotal, isLoading, refresh, confirm, skip } =
     useSubscriptions();
-  const currency = activeBudget?.currency ?? "EUR";
+  const currency = activeBudget?.currency ?? "MGA";
 
   useFocusEffect(
     useCallback(() => {
@@ -179,14 +178,6 @@ const styles = StyleSheet.create({
   section: { gap: 8 },
   sectionTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 1.2 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, padding: 10 },
-  icon: {
-    width: 38,
-    height: 38,
-    borderRadius: Radius.sm,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emoji: { fontSize: 18 },
   name: { fontSize: 14, fontWeight: "700" },
   meta: { fontSize: 12, marginTop: 2 },
   amount: { fontSize: 14, fontWeight: "700" },

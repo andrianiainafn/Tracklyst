@@ -3,6 +3,7 @@ import { budgetService } from '../../budgets/services/budgetService';
 import { useBudgetStore } from '../../budgets/store/budgetStore';
 import { transactionService } from '../services/transactionService';
 import { useTransactionStore } from '../store/transactionStore';
+import { getErrorMessage } from "@/src/utils/errors";
 
 /**
  * Hook for deleting a transaction with optimistic update.
@@ -36,7 +37,7 @@ export const useDeleteTransaction = () => {
     } catch (err) {
       // Rollback
       useTransactionStore.getState().setTransactions(snapshot);
-      const msg = err instanceof Error ? err.message : 'Erreur de suppression';
+      const msg = getErrorMessage(err, 'Erreur de suppression');
       setError(msg);
       throw err;
     } finally {

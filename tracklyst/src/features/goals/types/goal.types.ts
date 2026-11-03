@@ -38,7 +38,10 @@ export interface CreateGoalDTO {
   priority?: number;
 }
 
-export type UpdateGoalDTO = Partial<CreateGoalDTO> & {
+export type UpdateGoalDTO = Partial<Omit<CreateGoalDTO, "deadline" | "description">> & {
+  // null efface la valeur en base.
+  deadline?: string | null;
+  description?: string | null;
   status?: GoalStatus;
   current_amount?: number;
 };

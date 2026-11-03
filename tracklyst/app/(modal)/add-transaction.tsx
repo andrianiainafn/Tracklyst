@@ -1,9 +1,15 @@
 import { Colors, Radius } from "@/constants/theme";
 import { Button } from "@/src/components/ui/Button";
-import { IconSymbol } from "@/src/components/ui/icon-symbol.ios";
+import { IconSymbol } from "@/src/components/ui/icon-symbol";
 import { Input } from "@/src/components/ui/Input";
 import { useBudgets } from "@/src/features/budgets/hooks/useBudgets";
 import { budgetService } from "@/src/features/budgets/services/budgetService";
+import { CategoryIcon } from "@/src/features/categories/components/CategoryIcon";
+import {
+  DEFAULT_EXPENSE_ICON,
+  DEFAULT_INCOME_ICON,
+  iconForLabel,
+} from "@/src/features/categories/constants/categoryIcons";
 import { categoryService } from "@/src/features/categories/services/categoryService";
 import { useCategoryStore } from "@/src/features/categories/store/categoryStore";
 import type { BudgetBalance } from "@/src/features/budgets/types/budget.types";
@@ -159,7 +165,7 @@ export default function AddTransaction() {
   const c = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
   const { bottom } = useSafeAreaInsets();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const params = useLocalSearchParams<{
     id?: string;
     type?: TxType;
@@ -452,13 +458,30 @@ export default function AddTransaction() {
                       ? "Aucune catégorie trouvée pour ce budget"
                       : `Aucune catégorie de type "${type === "income" ? "revenu" : "dépense"}"`}
                 </Text>
+                {selectedBudget && (
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(modal)/categories",
+                        params: { budget_id: selectedBudget.id },
+                      } as any)
+                    }
+                    style={({ pressed }) => [
+                      styles.manageCatsBtn,
+                      { backgroundColor: accentLight },
+                      pressed && { opacity: 0.7 },
+                    ]}
+                  >
+                    <Ionicons name="add-circle-outline" size={16} color={accentColor} />
+                    <Text style={[styles.manageCatsText, { color: accentColor }]}>Ajouter des catégories</Text>
+                  </Pressable>
+                )}
               </View>
             ) : (
               <View style={styles.catGrid}>
                 {filteredCats.map((cat) => {
                   const isSelected = categoryId === cat.id;
                   const color = cat.color ?? "#6B7280";
-                  const icon = cat.icon ?? "💳";
                   return (
                     <Pressable
                       key={cat.id}
@@ -469,14 +492,7 @@ export default function AddTransaction() {
                         isSelected && { backgroundColor: accentLight, borderColor: color, borderWidth: 1.5 },
                       ]}
                     >
-                      <View
-                        style={[
-                          styles.catIconWrap,
-                          { backgroundColor: isSelected ? color : color + "20" },
-                        ]}
-                      >
-                        <Text style={styles.catIconEmoji}>{icon}</Text>
-                      </View>
+                      <CategoryIcon category={cat} size={42} filled={isSelected} />
                       <Text
                         style={[
                           styles.catLabel,
@@ -517,8 +533,10 @@ export default function AddTransaction() {
                         budget_id: selectedBudget.id,
                         name,
                         type,
-                        icon: type === "income" ? "💵" : "💸",
-                        color: "#6B7280",
+                        icon:
+                          iconForLabel(name) ??
+                          (type === "income" ? DEFAULT_INCOME_ICON : DEFAULT_EXPENSE_ICON),
+                        color: "#64748B",
                       });
                       addCategory(created);
                       setNewCategoryName("");
@@ -658,8 +676,16 @@ const styles = StyleSheet.create({
     gap: 6,
     position: "relative",
   },
-  catIconWrap: { width: 42, height: 42, borderRadius: 13, alignItems: "center", justifyContent: "center" },
-  catIconEmoji: { fontSize: 20 },
+  manageCatsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    marginTop: 4,
+  },
+  manageCatsText: { fontSize: 13, fontWeight: "700" },
   catLabel: { fontSize: 10, fontWeight: "600", textAlign: "center" },
   catCheck: {
     position: "absolute",

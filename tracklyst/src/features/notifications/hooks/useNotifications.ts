@@ -74,7 +74,7 @@ export const useNotifications = () => {
           severity: "success",
           icon: "checkmark.seal.fill",
           title: "Objectif atteint",
-          message: `Vous avez atteint votre objectif « ${goal.name} » 🎉`,
+          message: `Vous avez atteint votre objectif « ${goal.name} ». Bravo !`,
         });
         continue;
       }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { authService } from "../services/authService";
 import { useAuthStore } from "../store/authStore";
+import { getErrorMessage } from "@/src/utils/errors";
 
 export const useLogin = () => {
   const { setSession, setLoading, setError, isLoading, error } = useAuthStore();
@@ -19,7 +20,7 @@ export const useLogin = () => {
       if (session) setSession(session);
       return true;
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Login failed";
+      const message = getErrorMessage(err, "Login failed");
       setError(message);
       return false;
     } finally {
@@ -35,7 +36,7 @@ export const useLogin = () => {
       if (session) setSession(session);
       return !!session;
     } catch (err) {
-      const message = err instanceof Error ? err.message : "OAuth login failed";
+      const message = getErrorMessage(err, "OAuth login failed");
       setError(message);
       return false;
     } finally {
@@ -57,7 +58,7 @@ export const useLogin = () => {
       return true;
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Failed to send magic link";
+        getErrorMessage(err, "Failed to send magic link");
       setError(message);
       return false;
     } finally {
@@ -78,7 +79,7 @@ export const useLogin = () => {
       return true;
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Failed to send reset email";
+        getErrorMessage(err, "Failed to send reset email");
       setError(message);
       return false;
     } finally {

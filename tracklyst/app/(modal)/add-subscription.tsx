@@ -1,14 +1,19 @@
 import { Colors, Radius } from "@/constants/theme";
 import { Button } from "@/src/components/ui/Button";
-import { IconSymbol } from "@/src/components/ui/icon-symbol.ios";
+import { IconSymbol } from "@/src/components/ui/icon-symbol";
 import { Input } from "@/src/components/ui/Input";
 import { useBudgetStore } from "@/src/features/budgets/store/budgetStore";
+import {
+  iconForLabel,
+  resolveCategoryIcon,
+} from "@/src/features/categories/constants/categoryIcons";
 import { useCategories } from "@/src/features/categories/hooks/useCategories";
 import { subscriptionService } from "@/src/features/subscriptions/services/subscriptionService";
 import { useSubscriptionStore } from "@/src/features/subscriptions/store/subscriptionStore";
 import type { SubscriptionFrequency } from "@/src/features/subscriptions/types/subscription.types";
 import { toISODate, todayISO } from "@/src/features/subscriptions/utils/schedule";
 import { formatCurrency, getCurrencySymbol } from "@/src/utils/currency";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePicker, {
   DateTimePickerAndroid,
 } from "@react-native-community/datetimepicker";
@@ -215,6 +220,11 @@ export default function AddSubscriptionScreen() {
                     { backgroundColor: selected ? c.tintMuted : c.surface, borderColor: selected ? c.tint : c.border },
                   ]}
                 >
+                  <MaterialCommunityIcons
+                    name={iconForLabel(s) ?? "autorenew"}
+                    size={16}
+                    color={selected ? c.tint : c.textMuted}
+                  />
                   <Text style={[styles.chipText, { color: selected ? c.tint : c.textMuted }]}>{s}</Text>
                 </Pressable>
               );
@@ -298,8 +308,13 @@ export default function AddSubscriptionScreen() {
                     { backgroundColor: selected ? color + "20" : c.surface, borderColor: selected ? color : c.border },
                   ]}
                 >
+                  <MaterialCommunityIcons
+                    name={resolveCategoryIcon(cat)}
+                    size={16}
+                    color={selected ? color : c.textMuted}
+                  />
                   <Text style={[styles.chipText, { color: selected ? color : c.textMuted }]}>
-                    {cat.icon ?? "💸"} {cat.name}
+                    {cat.name}
                   </Text>
                 </Pressable>
               );
@@ -344,6 +359,9 @@ const styles = StyleSheet.create({
   chips: { gap: 8, marginTop: -6 },
   catWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: Radius.pill,

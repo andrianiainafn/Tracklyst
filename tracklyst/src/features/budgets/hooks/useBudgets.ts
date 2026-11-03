@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { budgetService } from '../services/budgetService';
 import { useBudgetStore } from '../store/budgetStore';
 import type { CreateBudgetDTO, UpdateBudgetDTO } from '../types/budget.types';
+import { getErrorMessage } from "@/src/utils/errors";
 
 /**
  * Primary hook for budgets.
@@ -32,7 +33,7 @@ export const useBudgets = () => {
           setActiveBudget(data[0]);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erreur de chargement');
+        setError(getErrorMessage(err, 'Erreur de chargement'));
       }
     };
 
@@ -47,7 +48,7 @@ export const useBudgets = () => {
       useBudgetStore.getState().addBudget(created);
       return created;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur lors de la création");
+      setError(getErrorMessage(err, "Erreur lors de la création"));
       throw err;
     } finally {
       setLoading(false);
@@ -62,7 +63,7 @@ export const useBudgets = () => {
       useBudgetStore.getState().updateBudget(id, updated);
       return updated;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur de mise à jour');
+      setError(getErrorMessage(err, 'Erreur de mise à jour'));
       throw err;
     } finally {
       setLoading(false);
@@ -76,7 +77,7 @@ export const useBudgets = () => {
       await budgetService.deleteBudget(id);
       useBudgetStore.getState().deleteBudget(id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur de suppression');
+      setError(getErrorMessage(err, 'Erreur de suppression'));
       throw err;
     } finally {
       setLoading(false);
@@ -90,7 +91,7 @@ export const useBudgets = () => {
       const data = await budgetService.getBudgets();
       setBudgets(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur de rechargement');
+      setError(getErrorMessage(err, 'Erreur de rechargement'));
     }
   };
 

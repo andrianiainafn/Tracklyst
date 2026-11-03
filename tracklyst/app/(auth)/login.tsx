@@ -8,6 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -114,9 +115,7 @@ export default function LoginScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View style={[styles.logoMark, { backgroundColor: c.tint }]}>
-            <Feather name="activity" size={22} color="#fff" />
-          </View>
+          <Image source={require("@/src/assets/images/logo.png")} style={styles.logoMark} />
           <Text style={[styles.appName, { color: c.text }]}>Tracklyst</Text>
           <Text style={[styles.tagline, { color: c.textSubtle }]}>
             Vos finances, maîtrisées
@@ -290,14 +289,7 @@ const styles = StyleSheet.create({
   ghostButtonText: { fontSize: 14, fontWeight: "600" },
 
   header: { alignItems: "center", marginBottom: 32 },
-  logoMark: {
-    width: 56,
-    height: 56,
-    borderRadius: Radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
+  logoMark: { width: 56, height: 56, marginBottom: 14 },
   appName: { fontSize: 26, fontWeight: "800", letterSpacing: -0.5 },
   tagline: { fontSize: 13, marginTop: 3, letterSpacing: 0.1 },
 

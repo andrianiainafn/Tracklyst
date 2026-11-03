@@ -4,6 +4,7 @@ import { useBudgetStore } from '../../budgets/store/budgetStore';
 import { transactionService } from '../services/transactionService';
 import { useTransactionStore } from '../store/transactionStore';
 import type { CreateTransactionDTO } from '../types/transaction.types';
+import { getErrorMessage } from "@/src/utils/errors";
 
 /**
  * Lightweight hook used by the add-transaction modal.
@@ -33,7 +34,7 @@ export const useAddTransaction = () => {
 
       return created;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erreur lors de l'ajout";
+      const msg = getErrorMessage(err, "Erreur lors de l'ajout");
       setError(msg);
       throw err;
     } finally {

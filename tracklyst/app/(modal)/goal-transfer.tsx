@@ -1,7 +1,7 @@
 import { Colors, Radius } from "@/constants/theme";
 import { Button } from "@/src/components/ui/Button";
 import { Card } from "@/src/components/ui/Card";
-import { IconSymbol } from "@/src/components/ui/icon-symbol.ios";
+import { IconSymbol } from "@/src/components/ui/icon-symbol";
 import { Input } from "@/src/components/ui/Input";
 import { useActiveBudget } from "@/src/features/budgets/hooks/useActiveBudget";
 import { budgetService } from "@/src/features/budgets/services/budgetService";
@@ -11,6 +11,7 @@ import { goalService } from "@/src/features/goals/services/goalService";
 import { useGoalStore } from "@/src/features/goals/store/goalStore";
 import { formatCurrency, getCurrencySymbol } from "@/src/utils/currency";
 import { todayISO } from "@/src/utils/date";
+import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
@@ -127,7 +128,23 @@ export default function GoalTransferModal() {
             <>
               {/* Résumé objectif */}
               <Card>
-                <Text style={[styles.goalName, { color: c.text }]}>{goal.name}</Text>
+                <View style={styles.goalHeader}>
+                  <Text style={[styles.goalName, { color: c.text, flex: 1 }]}>{goal.name}</Text>
+                  <Pressable
+                    onPress={() =>
+                      router.push({ pathname: "/(modal)/add-goal", params: { id: goal.id } } as any)
+                    }
+                    hitSlop={8}
+                    style={({ pressed }) => [
+                      styles.editBtn,
+                      { backgroundColor: c.surfaceAlt },
+                      pressed && { opacity: 0.6 },
+                    ]}
+                  >
+                    <Ionicons name="create-outline" size={15} color={c.text} />
+                    <Text style={[styles.editText, { color: c.text }]}>Modifier</Text>
+                  </Pressable>
+                </View>
                 <Text style={[styles.goalLine, { color: c.textMuted }]}>
                   {formatCurrency(goal.current_amount, activeBudget?.currency)}{" "}
                   sur {formatCurrency(goal.target_amount, activeBudget?.currency)}
@@ -233,6 +250,16 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   scroll: { paddingHorizontal: 20, paddingTop: 20, gap: 18 },
   goalName: { fontSize: 15, fontWeight: "700", marginBottom: 4 },
+  goalHeader: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  editBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  editText: { fontSize: 12, fontWeight: "700" },
   goalLine: { fontSize: 12 },
   modeToggle: { flexDirection: "row", borderRadius: Radius.md, padding: 4, gap: 4 },
   modeBtn: {

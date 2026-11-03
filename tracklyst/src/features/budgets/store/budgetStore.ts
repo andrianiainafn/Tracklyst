@@ -32,8 +32,19 @@ export const useBudgetStore = create<BudgetState>()(
         isLoading: false,
         error: null,
 
+        // Le budget actif est persisté sur l'appareil : on le remplace par
+        // la version fraîche (devise, nom, thème) à chaque chargement.
         setBudgets: (budgets) =>
-          set({ budgets, isLoading: false, error: null }),
+          set((state) => ({
+            budgets,
+            isLoading: false,
+            error: null,
+            activeBudget: state.activeBudget
+              ? (budgets.find((b) => b.id === state.activeBudget!.id) ??
+                budgets[0] ??
+                null)
+              : state.activeBudget,
+          })),
 
         setActiveBudget: (budget) => set({ activeBudget: budget }),
 

@@ -7,6 +7,7 @@ import {
   CreateTransactionDTO,
   UpdateTransactionDTO,
 } from "../types/transaction.types";
+import { getErrorMessage } from "@/src/utils/errors";
 
 /**
  * Primary hook for the transactions tab.
@@ -34,7 +35,7 @@ export const useTransactions = () => {
         const data = await transactionService.getTransactions(activeBudget.id);
         setTransactions(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Erreur de chargement");
+        setError(getErrorMessage(err, "Erreur de chargement"));
       }
     };
 
@@ -56,7 +57,7 @@ export const useTransactions = () => {
       }
       return created;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erreur lors de l'ajout";
+      const msg = getErrorMessage(err, "Erreur lors de l'ajout");
       setError(msg);
       throw err;
     } finally {
@@ -80,7 +81,7 @@ export const useTransactions = () => {
       return updated;
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : "Erreur lors de la mise à jour";
+        getErrorMessage(err, "Erreur lors de la mise à jour");
       setError(msg);
       throw err;
     } finally {
@@ -102,7 +103,7 @@ export const useTransactions = () => {
       }
     } catch (err) {
       const msg =
-        err instanceof Error ? err.message : "Erreur lors de la suppression";
+        getErrorMessage(err, "Erreur lors de la suppression");
       setError(msg);
       throw err;
     } finally {
@@ -118,7 +119,7 @@ export const useTransactions = () => {
       const data = await transactionService.getTransactions(activeBudget.id);
       setTransactions(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur de rechargement");
+      setError(getErrorMessage(err, "Erreur de rechargement"));
     }
   };
 
