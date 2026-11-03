@@ -1,6 +1,6 @@
 "use client";
 
-import { mdiCheckCircle, mdiPlus, mdiWalletOutline } from "@mdi/js";
+import { mdiAccountMultiple, mdiCheckCircle, mdiKeyVariant, mdiPlus, mdiWalletOutline } from "@mdi/js";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Icon, Sheet, cx } from "@/components/ui";
@@ -43,7 +43,7 @@ export function BudgetSwitcher({ open, onClose }: { open: boolean; onClose: () =
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-white"
                 style={{ background: resolveBudgetTheme(b).to }}
               >
-                <Icon path={mdiWalletOutline} size={20} />
+                <Icon path={b.owner_type === "group" ? mdiAccountMultiple : mdiWalletOutline} size={20} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[15px] font-bold">{b.name}</span>
@@ -70,6 +70,14 @@ export function BudgetSwitcher({ open, onClose }: { open: boolean; onClose: () =
         >
           <Icon path={mdiPlus} size={20} />
           Nouveau budget
+        </Link>
+        <Link
+          href="/budgets/join"
+          onClick={onClose}
+          className="flex items-center justify-center gap-1.5 py-1.5 text-[14px] font-semibold text-muted active:opacity-60"
+        >
+          <Icon path={mdiKeyVariant} size={16} />
+          Rejoindre un budget avec un code
         </Link>
       </div>
     </Sheet>

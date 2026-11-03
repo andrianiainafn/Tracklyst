@@ -268,3 +268,55 @@ export async function createSubscription(input: {
     }),
   );
 }
+
+// ─── Partage de budget (fonctions SQL de la migration 00008) ─────────────────
+
+export interface BudgetMember {
+  user_id: string;
+  display_name: string;
+  email: string | null;
+  role: "owner" | "admin" | "member";
+  joined_at: string;
+  is_me: boolean;
+}
+
+const SHARING_ERRORS: Record<string, string> = {
+  invalid_code: "Ce code ne correspond à aucun budget. Vérifiez les 6 caractères.",
+  not_owner: "Seul le propriétaire du budget peut faire cela.",
+  owner_cannot_leave: "Vous êtes le propriétaire : retirez d'abord les autres membres.",
+  cannot_remove_self: "Vous ne pouvez pas vous retirer vous-même.",
+  forbidden: "Vous n'avez pas accès à ce budget.",
+  budget_not_found: "Budget introuvable.",
+  not_authenticated: "Session expirée : reconnectez-vous.",
+};
+
+function sharingCheck<T>({ data, error }: { data: T | null; error: { message?: string } | null }): T {
+  if (error) {
+    const key = Object.keys(SHARING_ERRORS).find((k) => error.message?.includes(k));
+    throw new Error(key ? SHARING_ERRORS[key] : error.message || "Une erreur est survenue.");
+  }
+  return data as T;
+}
+
+/** Normalise une saisie (espaces, tirets, minuscules) en code de 6 caractères. */
+export const normalizeShareCode = (raw: string) => raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+
+export async function getShareCode(budgetId: string, renew = false): Promise<string> {
+  return sharingCheck(await supabase.rpc("share_budget", { p_budget_id: budgetId, p_renew: renew }));
+}
+
+export async function joinBudget(code: string): Promise<string> {
+  return sharingCheck(await supabase.rpc("join_budget", { p_code: normalizeShareCode(code) }));
+}
+
+export async function getBudgetMembers(budgetId: string): Promise<BudgetMember[]> {
+  return sharingCheck(await supabase.rpc("budget_members", { p_budget_id: budgetId })) ?? [];
+}
+
+export async function removeBudgetMember(budgetId: string, userId: string) {
+  sharingCheck(await supabase.rpc("remove_budget_member", { p_budget_id: budgetId, p_user_id: userId }));
+}
+
+export async function leaveBudget(budgetId: string) {
+  sharingCheck(await supabase.rpc("leave_budget", { p_budget_id: budgetId }));
+}
