@@ -1,9 +1,11 @@
 "use client";
 
+import { mdiPencilOutline } from "@mdi/js";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { Button, Card, Segmented } from "@/components/ui";
+import { Button, Card, Icon, Segmented } from "@/components/ui";
 import { errorMessage, moveGoal } from "@/lib/data";
 import { currencySymbol, money, parseAmount } from "@/lib/format";
 import { useActiveBudget, useApp } from "@/stores/app";
@@ -56,7 +58,14 @@ export default function GoalMovePage({ params }: { params: Promise<{ id: string 
     <>
       <PageHeader title={goal.name} />
       <div className="flex flex-col gap-5 px-4 pb-[calc(24px+env(safe-area-inset-bottom))] pt-2">
-        <Card className="flex flex-col gap-1 p-4">
+        <Card className="relative flex flex-col gap-1 p-4 pr-28">
+          <Link
+            href={`/goals/${goal.id}/edit`}
+            className="absolute right-3 top-3 flex h-9 items-center gap-1.5 rounded-[10px] bg-surface-alt px-3 text-[13px] font-bold active:opacity-70"
+          >
+            <Icon path={mdiPencilOutline} size={16} />
+            Modifier
+          </Link>
           <p className="text-[13px] text-muted">
             <b className="text-ink">{money(Number(goal.current_amount), currency)}</b> épargnés sur {money(Number(goal.target_amount), currency)}
           </p>

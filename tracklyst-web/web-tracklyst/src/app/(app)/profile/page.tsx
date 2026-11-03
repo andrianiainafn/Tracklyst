@@ -1,6 +1,6 @@
 "use client";
 
-import { mdiAccountMultiplePlusOutline, mdiChevronRight, mdiKeyVariant, mdiLogout } from "@mdi/js";
+import { mdiAccountMultiplePlusOutline, mdiAutorenew, mdiChevronRight, mdiFlagOutline, mdiKeyVariant, mdiLogout, mdiSpeedometer } from "@mdi/js";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card, Icon } from "@/components/ui";
@@ -59,6 +59,44 @@ export default function ProfilePage() {
       </Card>
 
       <section className="flex flex-col gap-2">
+        <h2 className="px-1 text-[11px] font-bold tracking-[0.12em] text-subtle">MON BUDGET</h2>
+        <Card className="overflow-hidden">
+          {[
+            { href: "/limits", icon: mdiSpeedometer, tint: "#0EA5E9", label: "Plafonds du mois", detail: budget?.name ?? "" },
+            {
+              href: "/subscriptions",
+              icon: mdiAutorenew,
+              tint: "#8B5CF6",
+              label: "Abonnements",
+              detail: `${subscriptions.filter((x) => x.is_active).length} actif${subscriptions.filter((x) => x.is_active).length > 1 ? "s" : ""}`,
+            },
+            {
+              href: "/goals",
+              icon: mdiFlagOutline,
+              tint: "#10B981",
+              label: "Objectifs",
+              detail: `${goals.filter((g) => g.status !== "cancelled").length} objectif${goals.filter((g) => g.status !== "cancelled").length > 1 ? "s" : ""}`,
+            },
+          ].map((r, i) => (
+            <Link
+              key={r.href}
+              href={r.href}
+              className={`flex items-center gap-3.5 px-3.5 py-3 active:bg-surface-alt ${i > 0 ? "border-t border-line" : ""}`}
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]" style={{ background: `${r.tint}1f`, color: r.tint }}>
+                <Icon path={r.icon} size={19} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold">{r.label}</span>
+                {r.detail && <span className="block truncate text-xs text-subtle">{r.detail}</span>}
+              </span>
+              <Icon path={mdiChevronRight} size={20} className="shrink-0 text-subtle" />
+            </Link>
+          ))}
+        </Card>
+      </section>
+
+      <section className="flex flex-col gap-2">
         <h2 className="px-1 text-[11px] font-bold tracking-[0.12em] text-subtle">PARTAGE</h2>
         <Card className="overflow-hidden">
           {[
@@ -90,7 +128,7 @@ export default function ProfilePage() {
       </section>
 
       <p className="px-1 text-xs leading-relaxed text-subtle">
-        La personnalisation des catégories et des plafonds se fait pour l&apos;instant dans l&apos;application mobile.
+        La personnalisation des catégories (nom, icône, couleur) se fait pour l&apos;instant dans l&apos;application mobile.
         Tout est synchronisé : c&apos;est le même compte.
       </p>
 

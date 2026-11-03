@@ -111,7 +111,7 @@ export default function HomePage() {
             ))}
           </div>
         )}
-        <Link href="/subscriptions/new" className="flex items-center gap-3 active:opacity-75">
+        <Link href={activeSubs.length === 0 ? "/subscriptions/new" : "/subscriptions"} className="flex items-center gap-3 active:opacity-75">
           <CategoryIcon iconKey="autorenew" color="#8B5CF6" size={40} />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold">Abonnements</p>
@@ -121,7 +121,7 @@ export default function HomePage() {
                 : `${activeSubs.length} actif${activeSubs.length > 1 ? "s" : ""} · ${money(activeSubs.reduce((a, x) => a + monthlyCost(x), 0), currency)} / mois`}
             </p>
           </div>
-          <Icon path={mdiPlus} size={20} className="shrink-0 text-subtle" />
+          <Icon path={activeSubs.length === 0 ? mdiPlus : mdiChevronRight} size={20} className="shrink-0 text-subtle" />
         </Link>
       </Card>
 
@@ -129,12 +129,20 @@ export default function HomePage() {
       <Card className="flex flex-col gap-3.5 p-4">
         <div className="flex items-baseline justify-between">
           <p className="text-[17px] font-extrabold tracking-tight">{monthLabel}</p>
-          <p className="text-xs text-subtle">Plafonds du mois</p>
+          <Link href="/limits" className="text-xs font-bold text-tint">
+            Gérer les plafonds
+          </Link>
         </div>
         {limits.length === 0 ? (
-          <p className="rounded-[14px] bg-surface-alt p-4 text-center text-xs leading-relaxed text-muted">
-            Aucun plafond. Définissez-en (essence, courses, petites dépenses…) dans l&apos;application mobile.
-          </p>
+          <Link
+            href="/limits"
+            className="flex flex-col items-center gap-2 rounded-[14px] bg-surface-alt p-4 text-center active:opacity-70"
+          >
+            <span className="text-xs leading-relaxed text-muted">
+              Aucun plafond. Fixez un maximum pour l&apos;essence, les courses, les petites dépenses…
+            </span>
+            <span className="text-[13px] font-bold text-tint">Définir mes plafonds</span>
+          </Link>
         ) : (
           limits.map((l) => {
             const color = l.status === "over" ? "var(--danger)" : l.status === "warning" ? "var(--warning)" : "var(--tint)";

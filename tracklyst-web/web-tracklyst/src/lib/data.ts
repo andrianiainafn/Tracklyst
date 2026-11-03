@@ -320,3 +320,38 @@ export async function removeBudgetMember(budgetId: string, userId: string) {
 export async function leaveBudget(budgetId: string) {
   sharingCheck(await supabase.rpc("leave_budget", { p_budget_id: budgetId }));
 }
+
+// ─── Modification / suppression ───────────────────────────────────────────────
+
+/** Plafond mensuel d'une catégorie ; null retire le plafond. */
+export async function updateCategoryLimit(categoryId: string, limit: number | null) {
+  check(await supabase.from("categories").update({ monthly_limit: limit }).eq("id", categoryId));
+}
+
+export type SubscriptionInput = {
+  category_id: string;
+  amount: number;
+  description: string;
+  frequency: "weekly" | "monthly" | "yearly";
+  next_occurrence: string;
+};
+
+export async function updateSubscription(id: string, input: Partial<SubscriptionInput> & { is_active?: boolean }) {
+  check(await supabase.from("recurring_rules").update(input).eq("id", id));
+}
+
+export async function deleteSubscription(id: string) {
+  check(await supabase.from("recurring_rules").delete().eq("id", id));
+}
+
+export async function updateGoal(
+  id: string,
+  input: { name: string; target_amount: number; deadline: string | null; description: string | null },
+) {
+  check(await supabase.from("goals").update(input).eq("id", id));
+}
+
+/** Supprime l'objectif : l'argent épargné redevient disponible dans le budget. */
+export async function deleteGoal(id: string) {
+  check(await supabase.from("goals").delete().eq("id", id));
+}
