@@ -1,3 +1,4 @@
+import { fieldCrypto } from "@/src/features/e2ee";
 import { supabase } from "@/src/lib/supabase";
 import type {
   Budget,
@@ -18,10 +19,12 @@ export const budgetService = {
       .order("created_at", { ascending: true });
 
     if (error) throw error;
-    return (data ?? []).map((row) => ({
-      ...row,
-      initial_amount: Number(row.initial_amount ?? 0),
-    })) as Budget[];
+    return fieldCrypto.decryptBudgets(
+      (data ?? []).map((row) => ({
+        ...row,
+        initial_amount: Number(row.initial_amount ?? 0),
+      })) as Budget[],
+    );
   },
 
   /**
@@ -35,10 +38,10 @@ export const budgetService = {
       .single();
 
     if (error) throw error;
-    return {
+    return fieldCrypto.decryptOne("budgets", id, {
       ...data,
       initial_amount: Number(data?.initial_amount ?? 0),
-    } as Budget;
+    } as Budget);
   },
 
   /**
@@ -61,13 +64,13 @@ export const budgetService = {
   async updateBudget(id: string, dto: UpdateBudgetDTO): Promise<Budget> {
     const { data, error } = await supabase
       .from("budgets")
-      .update(dto)
+      .update(await fieldCrypto.encrypt("budgets", id, dto))
       .eq("id", id)
       .select()
       .single();
 
     if (error) throw error;
-    return data as Budget;
+    return fieldCrypto.decryptOne("budgets", id, data as Budget);
   },
 
   /**

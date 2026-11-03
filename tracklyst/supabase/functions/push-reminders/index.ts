@@ -7,6 +7,7 @@ import {
   formatAmount,
   isAuthorized,
   json,
+  readable,
   recipientsForBudget,
   sendPush,
   type PushMessage,
@@ -37,7 +38,7 @@ Deno.serve(async (req) => {
       messages.push({
         to,
         title: "Prélèvement aujourd'hui",
-        body: `${s.description ?? "Abonnement"} · ${formatAmount(Number(s.amount), currency)}. Validez-le ou ignorez-le dans Tracklyst.`,
+        body: `${readable(s.description, "Un abonnement")} · ${formatAmount(Number(s.amount), currency)}. Validez-le ou ignorez-le dans Tracklyst.`,
         data: { url: "/(tabs)" },
       });
     }
@@ -61,7 +62,9 @@ Deno.serve(async (req) => {
       messages.push({
         to,
         title: due ? "Échéance aujourd'hui" : "Échéance dans 7 jours",
-        body: `« ${g.name} » : il reste ${formatAmount(remaining, currency)} à mettre de côté.`,
+        body: g.name && !g.name.startsWith("e1:")
+          ? `« ${g.name} » : il reste ${formatAmount(remaining, currency)} à mettre de côté.`
+          : `Un objectif : il reste ${formatAmount(remaining, currency)} à mettre de côté.`,
         data: { url: "/(tabs)/goals" },
       });
     }

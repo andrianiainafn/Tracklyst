@@ -1,3 +1,4 @@
+import { fieldCrypto, keyManager } from "./e2ee";
 import { supabase } from "./supabase";
 import { nextOccurrenceAfter } from "./schedule";
 import { todayISO } from "./format";
@@ -22,13 +23,20 @@ function check<T>({ data, error }: { data: T | null; error: unknown }): T {
   return data as T;
 }
 
+/** Budget d'une ligne (pour chiffrer une modification partielle). */
+async function budgetOf(table: "goals" | "recurring_rules", id: string) {
+  const row = check(await supabase.from(table).select("budget_id").eq("id", id).single()) as { budget_id: string };
+  return row.budget_id;
+}
+
 export async function getBudgets(): Promise<Budget[]> {
-  return check(
+  const rows = check(
     await supabase
       .from("budgets")
       .select("id, name, owner_type, owner_id, currency, initial_amount, theme, account_kind, account_name")
       .order("created_at", { ascending: true }),
-  );
+  ) as Budget[];
+  return fieldCrypto.decryptBudgets(rows);
 }
 
 export async function getAvailableBalance(budgetId: string): Promise<number> {
@@ -45,14 +53,15 @@ export async function getCategories(budgetId: string): Promise<Category[]> {
 }
 
 export async function getTransactions(budgetId: string): Promise<Transaction[]> {
-  return check(
+  const rows = check(
     await supabase
       .from("transactions")
       .select(CATEGORY_JOIN)
       .eq("budget_id", budgetId)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false }),
-  );
+  ) as Transaction[];
+  return fieldCrypto.decrypt("transactions", budgetId, rows);
 }
 
 export type TransactionInput = {
@@ -65,10 +74,12 @@ export type TransactionInput = {
 };
 
 export async function saveTransaction(input: TransactionInput, id?: string) {
+  const sealed = await fieldCrypto.encrypt("transactions", input.budget_id, input);
   const query = id
-    ? supabase.from("transactions").update(input).eq("id", id)
-    : supabase.from("transactions").insert(input);
-  return check(await query.select(CATEGORY_JOIN).single()) as Transaction;
+    ? supabase.from("transactions").update(sealed).eq("id", id)
+    : supabase.from("transactions").insert(sealed);
+  const row = check(await query.select(CATEGORY_JOIN).single()) as Transaction;
+  return fieldCrypto.decryptOne("transactions", input.budget_id, row);
 }
 
 export async function deleteTransaction(id: string) {
@@ -76,14 +87,15 @@ export async function deleteTransaction(id: string) {
 }
 
 export async function getGoals(budgetId: string): Promise<Goal[]> {
-  return check(
+  const rows = check(
     await supabase
       .from("goals")
       .select("*")
       .eq("budget_id", budgetId)
       .order("priority", { ascending: false })
       .order("created_at", { ascending: false }),
-  );
+  ) as Goal[];
+  return fieldCrypto.decrypt("goals", budgetId, rows);
 }
 
 /** Épargne nette du mois : dépôts − retraits sur les objectifs. */
@@ -107,14 +119,16 @@ export async function moveGoal(
   description: string | null,
 ) {
   check(
-    await supabase.from("goal_transactions").insert({
-      goal_id: goal.id,
-      budget_id: goal.budget_id,
-      amount,
-      type,
-      description,
-      date: todayISO(),
-    }),
+    await supabase.from("goal_transactions").insert(
+      await fieldCrypto.encrypt("goal_transactions", goal.budget_id, {
+        goal_id: goal.id,
+        budget_id: goal.budget_id,
+        amount,
+        type,
+        description,
+        date: todayISO(),
+      }),
+    ),
   );
   const current = Number(goal.current_amount) + (type === "deposit" ? amount : -amount);
   const status =
@@ -123,7 +137,7 @@ export async function moveGoal(
         ? "completed"
         : "in_progress"
       : goal.status;
-  return check(
+  const row = check(
     await supabase
       .from("goals")
       .update({ current_amount: current, status })
@@ -131,17 +145,19 @@ export async function moveGoal(
       .select("*")
       .single(),
   ) as Goal;
+  return fieldCrypto.decryptOne("goals", goal.budget_id, row);
 }
 
 export async function getSubscriptions(budgetId: string): Promise<Subscription[]> {
-  return check(
+  const rows = check(
     await supabase
       .from("recurring_rules")
       .select(CATEGORY_JOIN)
       .eq("budget_id", budgetId)
       .eq("type", "expense")
       .order("next_occurrence"),
-  );
+  ) as Subscription[];
+  return fieldCrypto.decrypt("recurring_rules", budgetId, rows);
 }
 
 /** Passe à l'échéance suivante ; conditionné sur l'échéance actuelle (pas de double avance). */
@@ -166,16 +182,18 @@ export async function skipSubscription(sub: Subscription) {
 /** Valide l'échéance : crée la dépense datée du jour d'échéance puis avance la règle. */
 export async function confirmSubscription(sub: Subscription) {
   if (!(await advance(sub))) return;
-  const { error } = await supabase.from("transactions").insert({
-    budget_id: sub.budget_id,
-    category_id: sub.category_id,
-    amount: sub.amount,
-    type: "expense",
-    description: sub.description,
-    date: sub.next_occurrence,
-    is_recurring: true,
-    recurring_rule_id: sub.id,
-  });
+  const { error } = await supabase.from("transactions").insert(
+    await fieldCrypto.encrypt("transactions", sub.budget_id, {
+      budget_id: sub.budget_id,
+      category_id: sub.category_id,
+      amount: sub.amount,
+      type: "expense",
+      description: sub.description,
+      date: sub.next_occurrence,
+      is_recurring: true,
+      recurring_rule_id: sub.id,
+    }),
+  );
   if (error) {
     await supabase
       .from("recurring_rules")
@@ -225,24 +243,30 @@ export async function createBudget(input: {
 }): Promise<Budget> {
   const { data: auth, error: authError } = await supabase.auth.getUser();
   if (authError || !auth.user) throw new Error("Session expirée : reconnectez-vous.");
+  // Chiffrement : clé et identifiant créés ici, le nom part déjà chiffré.
+  const id = crypto.randomUUID();
+  const key = keyManager.status === "unlocked" ? keyManager.newBudgetKey() : null;
+  const seal = (text: string | null) => (key ? keyManager.e2ee.encryptText(key, text) : text);
   const budget = check(
     await supabase
       .from("budgets")
       .insert({
-        name: input.name,
+        id,
+        name: seal(input.name),
         owner_type: "user",
         owner_id: auth.user.id,
         currency: input.currency,
         initial_amount: input.initial_amount,
         theme: input.theme,
         account_kind: input.account_kind,
-        account_name: input.account_name,
+        account_name: seal(input.account_name),
       })
       .select("id, name, owner_type, owner_id, currency, initial_amount, theme, account_kind, account_name")
       .single(),
   ) as Budget;
+  if (key) await keyManager.registerBudgetKey(id, key);
   if (input.withDefaultCategories) await addDefaultCategories(budget.id, []);
-  return budget;
+  return { ...budget, name: input.name, account_name: input.account_name };
 }
 
 export async function createGoal(input: {
@@ -252,7 +276,11 @@ export async function createGoal(input: {
   deadline: string | null;
   description: string | null;
 }) {
-  check(await supabase.from("goals").insert({ ...input, deadline: input.deadline ?? undefined }));
+  check(
+    await supabase
+      .from("goals")
+      .insert(await fieldCrypto.encrypt("goals", input.budget_id, { ...input, deadline: input.deadline ?? undefined })),
+  );
 }
 
 export async function createSubscription(input: {
@@ -264,12 +292,14 @@ export async function createSubscription(input: {
   start_date: string;
 }) {
   check(
-    await supabase.from("recurring_rules").insert({
-      ...input,
-      type: "expense",
-      interval: 1,
-      next_occurrence: input.start_date,
-    }),
+    await supabase.from("recurring_rules").insert(
+      await fieldCrypto.encrypt("recurring_rules", input.budget_id, {
+        ...input,
+        type: "expense",
+        interval: 1,
+        next_occurrence: input.start_date,
+      }),
+    ),
   );
 }
 
@@ -341,7 +371,8 @@ export type SubscriptionInput = {
 };
 
 export async function updateSubscription(id: string, input: Partial<SubscriptionInput> & { is_active?: boolean }) {
-  check(await supabase.from("recurring_rules").update(input).eq("id", id));
+  const sealed = await fieldCrypto.encrypt("recurring_rules", await budgetOf("recurring_rules", id), input);
+  check(await supabase.from("recurring_rules").update(sealed).eq("id", id));
 }
 
 export async function deleteSubscription(id: string) {
@@ -352,7 +383,8 @@ export async function updateGoal(
   id: string,
   input: { name: string; target_amount: number; deadline: string | null; description: string | null },
 ) {
-  check(await supabase.from("goals").update(input).eq("id", id));
+  const sealed = await fieldCrypto.encrypt("goals", await budgetOf("goals", id), input);
+  check(await supabase.from("goals").update(sealed).eq("id", id));
 }
 
 /** Supprime l'objectif : l'argent épargné redevient disponible dans le budget. */
@@ -364,7 +396,7 @@ export async function updateBudget(
   id: string,
   input: { name: string; theme: string; initial_amount: number; account_kind: string | null; account_name: string | null },
 ) {
-  check(await supabase.from("budgets").update(input).eq("id", id));
+  check(await supabase.from("budgets").update(await fieldCrypto.encrypt("budgets", id, input)).eq("id", id));
 }
 
 /**

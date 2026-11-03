@@ -1,6 +1,7 @@
 import { useAuth } from "@/src/features/auth/hooks/useAuth";
 import { authService } from "@/src/features/auth/services/authService";
 import { useAuthStore } from "@/src/features/auth/store/authStore";
+import { EncryptionGate } from "@/src/features/e2ee/EncryptionGate";
 import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import {
   DarkTheme,
@@ -95,6 +96,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(modal)" />
       </Stack>
+      <EncryptionGate />
       <StatusBar style="auto" />
     </ThemeProvider>
   );

@@ -7,7 +7,9 @@ import { BUDGET_THEMES, resolveBudgetTheme } from "@/src/features/budgets/consta
 import { budgetService } from "@/src/features/budgets/services/budgetService";
 import { sharingService } from "@/src/features/budgets/services/sharingService";
 import { useBudgetStore } from "@/src/features/budgets/store/budgetStore";
+import { keyManager } from "@/src/features/e2ee";
 import { supabase } from "@/src/lib/supabase";
+import * as Crypto from "expo-crypto";
 import { getErrorMessage } from "@/src/utils/errors";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
@@ -264,21 +266,30 @@ export default function AddBudgetScreen() {
         return;
       }
 
+      // Chiffrement : clé et identifiant créés sur l'appareil, le nom part chiffré.
+      const encrypted = keyManager.status === "unlocked";
+      const id = Crypto.randomUUID();
+      const budgetKey = encrypted ? keyManager.newBudgetKey() : null;
+      const seal = (text: string | null) => (budgetKey ? keyManager.e2ee.encryptText(budgetKey, text) : text);
       const dto = {
-        name: trimmed,
+        id,
+        name: seal(trimmed),
         owner_type: "user" as const,
         owner_id: user.id,
         currency: selectedCurrency.code,
         initial_amount: initialAmount,
         theme: selectedTheme.id,
-        ...account,
+        account_kind: account.account_kind,
+        account_name: seal(account.account_name),
       };
 
-      const { data: inserted, error: insertError } = await supabase
+      const { data: row, error: insertError } = await supabase
         .from("budgets")
         .insert(dto)
         .select()
         .single();
+      if (!insertError && budgetKey) await keyManager.registerBudgetKey(id, budgetKey);
+      const inserted = row && { ...row, name: trimmed, account_name: account.account_name };
 
       if (insertError) {
         Alert.alert(

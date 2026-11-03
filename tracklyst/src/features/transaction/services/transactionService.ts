@@ -1,9 +1,18 @@
+import { fieldCrypto } from "@/src/features/e2ee";
 import { supabase } from "@/src/lib/supabase";
 import type {
   CreateTransactionDTO,
   Transaction,
   UpdateTransactionDTO,
 } from "../types/transaction.types";
+
+/** Budget d'une transaction (pour chiffrer une modification partielle). */
+async function budgetOf(id: string, dto: { budget_id?: string }) {
+  if (dto.budget_id) return dto.budget_id;
+  const { data, error } = await supabase.from("transactions").select("budget_id").eq("id", id).single();
+  if (error) throw error;
+  return data.budget_id as string;
+}
 
 export const transactionService = {
   /**
@@ -24,7 +33,7 @@ export const transactionService = {
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return data as Transaction[];
+    return fieldCrypto.decrypt("transactions", budgetId, data as Transaction[]);
   },
 
   /**
@@ -60,7 +69,7 @@ export const transactionService = {
       .order("date", { ascending: false });
 
     if (error) throw error;
-    return data as Transaction[];
+    return fieldCrypto.decrypt("transactions", budgetId, data as Transaction[]);
   },
 
   /**
@@ -85,7 +94,7 @@ export const transactionService = {
       .order("date", { ascending: false });
 
     if (error) throw error;
-    return data as Transaction[];
+    return fieldCrypto.decrypt("transactions", budgetId, data as Transaction[]);
   },
 
   /**
@@ -103,7 +112,7 @@ export const transactionService = {
       .order("date", { ascending: false });
 
     if (error) throw error;
-    return data as Transaction[];
+    return fieldCrypto.decrypt("transactions", budgetId, data as Transaction[]);
   },
 
   /**
@@ -112,7 +121,7 @@ export const transactionService = {
   async createTransaction(dto: CreateTransactionDTO): Promise<Transaction> {
     const { data, error } = await supabase
       .from("transactions")
-      .insert(dto)
+      .insert(await fieldCrypto.encrypt("transactions", dto.budget_id, dto))
       .select(
         `
         *,
@@ -122,7 +131,7 @@ export const transactionService = {
       .single();
 
     if (error) throw error;
-    return data as Transaction;
+    return fieldCrypto.decryptOne("transactions", dto.budget_id, data as Transaction);
   },
 
   /**
@@ -132,9 +141,10 @@ export const transactionService = {
     id: string,
     dto: UpdateTransactionDTO,
   ): Promise<Transaction> {
+    const budgetId = await budgetOf(id, dto);
     const { data, error } = await supabase
       .from("transactions")
-      .update(dto)
+      .update(await fieldCrypto.encrypt("transactions", budgetId, dto))
       .eq("id", id)
       .select(
         `
@@ -145,7 +155,7 @@ export const transactionService = {
       .single();
 
     if (error) throw error;
-    return data as Transaction;
+    return fieldCrypto.decryptOne("transactions", budgetId, data as Transaction);
   },
 
   /**

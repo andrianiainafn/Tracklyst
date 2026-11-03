@@ -1,3 +1,4 @@
+import { fieldCrypto } from "@/src/features/e2ee";
 import { supabase } from "@/src/lib/supabase";
 import type {
   CreateGoalDTO,
@@ -6,6 +7,12 @@ import type {
   GoalTransaction,
   UpdateGoalDTO,
 } from "../types/goal.types";
+
+async function goalBudget(id: string) {
+  const { data, error } = await supabase.from("goals").select("budget_id").eq("id", id).single();
+  if (error) throw error;
+  return data.budget_id as string;
+}
 
 export const goalService = {
   async getGoals(budgetId: string): Promise<Goal[]> {
@@ -22,7 +29,7 @@ export const goalService = {
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return data as Goal[];
+    return fieldCrypto.decrypt("goals", budgetId, data as Goal[]);
   },
 
   async countGoals(budgetId: string): Promise<number> {
@@ -38,7 +45,7 @@ export const goalService = {
   async createGoal(dto: CreateGoalDTO): Promise<Goal> {
     const { data, error } = await supabase
       .from("goals")
-      .insert(dto)
+      .insert(await fieldCrypto.encrypt("goals", dto.budget_id, dto))
       .select(
         `
         *,
@@ -48,13 +55,14 @@ export const goalService = {
       .single();
 
     if (error) throw error;
-    return data as Goal;
+    return fieldCrypto.decryptOne("goals", dto.budget_id, data as Goal);
   },
 
   async updateGoal(id: string, dto: UpdateGoalDTO): Promise<Goal> {
+    const budgetId = await goalBudget(id);
     const { data, error } = await supabase
       .from("goals")
-      .update(dto)
+      .update(await fieldCrypto.encrypt("goals", budgetId, dto))
       .eq("id", id)
       .select(
         `
@@ -65,7 +73,7 @@ export const goalService = {
       .single();
 
     if (error) throw error;
-    return data as Goal;
+    return fieldCrypto.decryptOne("goals", budgetId, data as Goal);
   },
 
   async deleteGoal(id: string): Promise<void> {
@@ -82,7 +90,8 @@ export const goalService = {
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return data as GoalTransaction[];
+    const rows = data as GoalTransaction[];
+    return rows.length ? fieldCrypto.decrypt("goal_transactions", rows[0].budget_id, rows) : rows;
   },
 
   /** Mouvements d'épargne de tous les objectifs d'un budget sur une période. */
@@ -99,7 +108,7 @@ export const goalService = {
       .lte("date", endDate);
 
     if (error) throw error;
-    return data as GoalTransaction[];
+    return fieldCrypto.decrypt("goal_transactions", budgetId, data as GoalTransaction[]);
   },
 
   async createGoalTransaction(
@@ -107,12 +116,12 @@ export const goalService = {
   ): Promise<GoalTransaction> {
     const { data, error } = await supabase
       .from("goal_transactions")
-      .insert(dto)
+      .insert(await fieldCrypto.encrypt("goal_transactions", dto.budget_id, dto))
       .select("*")
       .single();
 
     if (error) throw error;
-    return data as GoalTransaction;
+    return fieldCrypto.decryptOne("goal_transactions", dto.budget_id, data as GoalTransaction);
   },
 };
 

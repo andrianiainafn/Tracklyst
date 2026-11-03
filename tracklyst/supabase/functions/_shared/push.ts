@@ -132,3 +132,11 @@ export async function sendPush(sb: SupabaseClient, messages: PushMessage[]) {
   }
   return sent;
 }
+
+/**
+ * Texte lisible dans une notification. Les textes chiffrés de bout en bout
+ * (« e1:… ») sont illisibles pour le serveur : on utilise alors le libellé neutre.
+ */
+export function readable(text: string | null | undefined, fallback: string) {
+  return text && !text.startsWith("e1:") ? text : fallback;
+}

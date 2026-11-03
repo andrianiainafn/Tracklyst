@@ -1,3 +1,4 @@
+import { keyManager } from "@/src/features/e2ee";
 import { supabase } from "@/src/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { makeRedirectUri } from "expo-auth-session";
@@ -140,6 +141,8 @@ export const authService = {
    * Sign out current user
    */
   async signOut(): Promise<void> {
+    // La clé de chiffrement quitte l'appareil avec la session.
+    await keyManager.lock();
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   },

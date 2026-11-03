@@ -1,3 +1,4 @@
+import { fieldCrypto } from "@/src/features/e2ee";
 import { supabase } from "@/src/lib/supabase";
 import type { Transaction } from "@/src/features/transaction/types/transaction.types";
 import type {
@@ -27,38 +28,46 @@ export const subscriptionService = {
       .order("next_occurrence", { ascending: true });
 
     if (error) throw error;
-    return data as Subscription[];
+    return fieldCrypto.decrypt("recurring_rules", budgetId, data as Subscription[]);
   },
 
   async createSubscription(dto: CreateSubscriptionDTO): Promise<Subscription> {
     const { data, error } = await supabase
       .from("recurring_rules")
-      .insert({
-        ...dto,
-        type: "expense",
-        interval: 1,
-        next_occurrence: dto.start_date,
-      })
+      .insert(
+        await fieldCrypto.encrypt("recurring_rules", dto.budget_id, {
+          ...dto,
+          type: "expense",
+          interval: 1,
+          next_occurrence: dto.start_date,
+        }),
+      )
       .select(SELECT)
       .single();
 
     if (error) throw error;
-    return data as Subscription;
+    return fieldCrypto.decryptOne("recurring_rules", dto.budget_id, data as Subscription);
   },
 
   async updateSubscription(
     id: string,
     dto: UpdateSubscriptionDTO,
   ): Promise<Subscription> {
+    const { data: rule, error: ruleError } = await supabase
+      .from("recurring_rules")
+      .select("budget_id")
+      .eq("id", id)
+      .single();
+    if (ruleError) throw ruleError;
     const { data, error } = await supabase
       .from("recurring_rules")
-      .update(dto)
+      .update(await fieldCrypto.encrypt("recurring_rules", rule.budget_id, dto))
       .eq("id", id)
       .select(SELECT)
       .single();
 
     if (error) throw error;
-    return data as Subscription;
+    return fieldCrypto.decryptOne("recurring_rules", rule.budget_id, data as Subscription);
   },
 
   async deleteSubscription(id: string): Promise<void> {
@@ -86,7 +95,8 @@ export const subscriptionService = {
       .select(SELECT);
 
     if (error) throw error;
-    return (data?.[0] as Subscription) ?? null;
+    const row = data?.[0] as Subscription | undefined;
+    return row ? fieldCrypto.decryptOne("recurring_rules", sub.budget_id, row) : null;
   },
 
   /**
@@ -101,16 +111,18 @@ export const subscriptionService = {
 
     const { data, error } = await supabase
       .from("transactions")
-      .insert({
-        budget_id: sub.budget_id,
-        category_id: sub.category_id,
-        amount: sub.amount,
-        type: "expense",
-        description: sub.description,
-        date: sub.next_occurrence,
-        is_recurring: true,
-        recurring_rule_id: sub.id,
-      })
+      .insert(
+        await fieldCrypto.encrypt("transactions", sub.budget_id, {
+          budget_id: sub.budget_id,
+          category_id: sub.category_id,
+          amount: sub.amount,
+          type: "expense",
+          description: sub.description,
+          date: sub.next_occurrence,
+          is_recurring: true,
+          recurring_rule_id: sub.id,
+        }),
+      )
       .select(
         `
         *,
@@ -127,6 +139,9 @@ export const subscriptionService = {
         .eq("id", sub.id);
       throw error;
     }
-    return { transaction: data as Transaction, subscription: advanced };
+    return {
+      transaction: await fieldCrypto.decryptOne("transactions", sub.budget_id, data as Transaction),
+      subscription: advanced,
+    };
   },
 };
