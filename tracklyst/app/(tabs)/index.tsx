@@ -9,6 +9,7 @@ import { budgetService } from "@/src/features/budgets/services/budgetService";
 import { CashflowChart } from "@/src/features/dashboard/components/CashflowChart";
 import { CategoryBreakdown } from "@/src/features/dashboard/components/CategoryBreakdown";
 import { MonthKpis } from "@/src/features/dashboard/components/MonthKpis";
+import { QuickActionsSheet, type QuickAction } from "@/src/features/dashboard/components/QuickActionsSheet";
 import { useDashboardStats } from "@/src/features/dashboard/hooks/useDashboardStats";
 import { MonthlyLimitsCard } from "@/src/features/categories/components/MonthlyLimitsCard";
 import { useMonthlySpending } from "@/src/features/categories/hooks/useMonthlySpending";
@@ -25,7 +26,7 @@ import { transactionService } from "@/src/features/transaction/services/transact
 import { getCurrencySymbol } from "@/src/utils/currency";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -62,6 +63,28 @@ export default function HomeScreen() {
   const { budgets, isLoading, error, refresh } = useBudgets();
   const { activeBudget, balance, switchBudget } = useActiveBudget();
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
+
+  const openQuickAction = (action: QuickAction) => {
+    switch (action) {
+      case "expense":
+      case "income":
+        router.push({
+          pathname: "/(modal)/add-transaction",
+          params: { type: action, ...(activeBudget ? { budget_id: activeBudget.id } : {}) },
+        });
+        break;
+      case "budget":
+        router.push("/(modal)/add_budget");
+        break;
+      case "goal":
+        router.push("/(modal)/add-goal" as any);
+        break;
+      case "subscription":
+        router.push("/(modal)/add-subscription" as any);
+        break;
+    }
+  };
   const { hidden, toggle: toggleHidden } = usePrivacyStore();
   const router = useRouter();
   const {
@@ -350,17 +373,28 @@ export default function HomeScreen() {
         onClose={() => setSwitcherOpen(false)}
       />
 
-      <FAB isDark={isDark} />
+      <QuickActionsSheet
+        visible={quickOpen}
+        onPick={openQuickAction}
+        onClose={() => setQuickOpen(false)}
+      />
+
+      <FAB isDark={isDark} open={quickOpen} onPress={() => setQuickOpen((o) => !o)} />
     </View>
   );
 }
 
 // ─── FAB ─────────────────────────────────────────────────────────────────────
-function FAB({ isDark }: { isDark: boolean }) {
+function FAB({ isDark, open, onPress }: { isDark: boolean; open: boolean; onPress: () => void }) {
   const c = isDark ? Colors.dark : Colors.light;
-  const router = useRouter();
   const { bottom } = useSafeAreaInsets();
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [scaleAnim] = useState(() => new Animated.Value(1));
+  const [turn] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    Animated.spring(turn, { toValue: open ? 1 : 0, useNativeDriver: true }).start();
+  }, [open, turn]);
+  const rotate = turn.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "45deg"] });
 
   const onPressIn = () =>
     Animated.spring(scaleAnim, { toValue: 0.9, useNativeDriver: true }).start();
@@ -377,10 +411,13 @@ function FAB({ isDark }: { isDark: boolean }) {
       <Pressable
         onPressIn={onPressIn}
         onPressOut={onPressOut}
-        onPress={() => router.push("/(modal)/add-transaction")}
+        onPress={onPress}
+        accessibilityLabel="Ajouter"
         style={[styles.fab, { backgroundColor: c.tint }]}
       >
-        <Ionicons name="add" size={24} color="#fff" />
+        <Animated.View style={{ transform: [{ rotate }] }}>
+          <Ionicons name="add" size={26} color="#fff" />
+        </Animated.View>
       </Pressable>
     </Animated.View>
   );
