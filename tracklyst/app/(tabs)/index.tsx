@@ -374,6 +374,10 @@ export default function HomeScreen() {
           setSwitcherOpen(false);
           router.push("/(modal)/join-budget" as any);
         }}
+        onEdit={(b) => {
+          setSwitcherOpen(false);
+          router.push({ pathname: "/(modal)/add_budget", params: { id: b.id } });
+        }}
         onClose={() => setSwitcherOpen(false)}
       />
 

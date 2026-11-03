@@ -21,7 +21,7 @@ export interface CreateBudgetDTO {
   theme?: string;
 }
 
-export type UpdateBudgetDTO = Partial<Pick<Budget, 'name' | 'currency' | 'theme'>>;
+export type UpdateBudgetDTO = Partial<Pick<Budget, 'name' | 'currency' | 'theme' | 'initial_amount'>>;
 
 // ─── Balance (calculated view) ────────────────────────────────────────────────
 export interface BudgetBalance {

@@ -181,6 +181,16 @@ export default function ProfileScreen() {
 
         <MenuSection title="MON BUDGET" c={c}>
           <MenuRow
+            icon="wallet-outline"
+            tint="#6366F1"
+            label="Modifier le budget"
+            detail={activeBudget ? `${activeBudget.name} · nom, couleur, suppression` : undefined}
+            onPress={() =>
+              activeBudget && router.push({ pathname: "/(modal)/add_budget", params: { id: activeBudget.id } })
+            }
+            c={c}
+          />
+          <MenuRow
             icon="shape-outline"
             tint="#10B981"
             label="Catégories"

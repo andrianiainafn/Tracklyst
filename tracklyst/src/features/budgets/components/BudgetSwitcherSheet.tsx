@@ -28,6 +28,7 @@ export function BudgetSwitcherSheet({
   onSelect,
   onCreate,
   onJoin,
+  onEdit,
   onClose,
 }: {
   visible: boolean;
@@ -37,6 +38,7 @@ export function BudgetSwitcherSheet({
   onSelect: (budget: Budget) => void;
   onCreate: () => void;
   onJoin: () => void;
+  onEdit: (budget: Budget) => void;
   onClose: () => void;
 }) {
   const isDark = useColorScheme() === "dark";
@@ -89,6 +91,14 @@ export function BudgetSwitcherSheet({
                         : formatCurrency(Math.round(balance), b.currency)}
                   </Text>
                 </View>
+                <Pressable
+                  onPress={() => onEdit(b)}
+                  hitSlop={10}
+                  accessibilityLabel={`Modifier ${b.name}`}
+                  style={({ pressed }) => [styles.edit, { backgroundColor: c.surface }, pressed && { opacity: 0.6 }]}
+                >
+                  <MaterialCommunityIcons name="pencil-outline" size={17} color={c.textMuted} />
+                </Pressable>
                 {active ? (
                   <Ionicons name="checkmark-circle" size={22} color={c.tint} />
                 ) : (
@@ -143,6 +153,7 @@ const styles = StyleSheet.create({
   name: { fontSize: 15, fontWeight: "700" },
   meta: { fontSize: 13, marginTop: 2 },
   radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2 },
+  edit: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   create: {
     flexDirection: "row",
     alignItems: "center",

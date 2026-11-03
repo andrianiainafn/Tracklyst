@@ -1,12 +1,15 @@
 import { Colors, Radius, Shadow } from "@/constants/theme";
 import { Button } from "@/src/components/ui/Button";
 import { Card } from "@/src/components/ui/Card";
-import { BUDGET_THEMES } from "@/src/features/budgets/constants/budgetThemes";
+import { BUDGET_THEMES, resolveBudgetTheme } from "@/src/features/budgets/constants/budgetThemes";
+import { budgetService } from "@/src/features/budgets/services/budgetService";
+import { sharingService } from "@/src/features/budgets/services/sharingService";
 import { useBudgetStore } from "@/src/features/budgets/store/budgetStore";
 import { supabase } from "@/src/lib/supabase";
+import { getErrorMessage } from "@/src/utils/errors";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
     Alert,
     KeyboardAvoidingView,
@@ -134,20 +137,105 @@ export default function AddBudgetScreen() {
   const { bottom } = useSafeAreaInsets();
   const c = isDark ? Colors.dark : Colors.light;
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [initialAmountRaw, setInitialAmountRaw] = useState("");
-  const [selectedTheme, setSelectedTheme] = useState(BUDGET_THEMES[0]);
-  const [selectedCurrency, setSelectedCurrency] = useState(CURRENCIES[0]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigation = useNavigation();
+  const params = useLocalSearchParams<{ id?: string }>();
+  const { budgets, addBudget, setActiveBudget } = useBudgetStore();
+  // Mode modification quand un id est passé (même écran que la création).
+  const existing = params.id ? budgets.find((b) => b.id === params.id) : undefined;
 
-  const { addBudget, setActiveBudget } = useBudgetStore();
+  const [name, setName] = useState(existing?.name ?? "");
+  const [description, setDescription] = useState("");
+  const [initialAmountRaw, setInitialAmountRaw] = useState(
+    existing && Number(existing.initial_amount ?? 0) > 0 ? String(Number(existing.initial_amount)) : "",
+  );
+  const [selectedTheme, setSelectedTheme] = useState(existing ? resolveBudgetTheme(existing) : BUDGET_THEMES[0]);
+  const [selectedCurrency, setSelectedCurrency] = useState(
+    CURRENCIES.find((cur) => cur.code === existing?.currency) ?? CURRENCIES[0],
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Rôle sur un budget partagé : seul le propriétaire peut supprimer.
+  const [role, setRole] = useState<string | null>(existing && existing.owner_type === "user" ? "owner" : null);
+
+  useEffect(() => {
+    if (existing) navigation.setOptions({ title: "Modifier le budget" });
+  }, [existing, navigation]);
+
+  useEffect(() => {
+    if (!existing || existing.owner_type !== "group") return;
+    let cancelled = false;
+    sharingService
+      .members(existing.id)
+      .then((list) => !cancelled && setRole(list.find((m) => m.is_me)?.role ?? "member"))
+      .catch(() => !cancelled && setRole("member"));
+    return () => {
+      cancelled = true;
+    };
+  }, [existing]);
+
+  const canEdit = !existing || role === "owner" || role === "admin";
+  const canDelete = !!existing && role === "owner";
+
+  const handleUpdate = async () => {
+    if (!existing) return;
+    setIsSubmitting(true);
+    try {
+      const updated = await budgetService.updateBudget(existing.id, {
+        name: name.trim(),
+        theme: selectedTheme.id,
+        initial_amount: initialAmount,
+      });
+      useBudgetStore.getState().updateBudget(existing.id, updated);
+      router.back();
+    } catch (err) {
+      Alert.alert("Modification impossible", getErrorMessage(err, "Une erreur est survenue."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (!existing) return;
+    const shared = existing.owner_type === "group";
+    Alert.alert(
+      `Supprimer « ${existing.name} » ?`,
+      `Toutes ses transactions, catégories, plafonds, objectifs et abonnements seront supprimés définitivement${
+        shared ? ", pour tous les membres" : ""
+      }.`,
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: () =>
+            Alert.alert("Dernière confirmation", `La suppression de « ${existing.name} » est irréversible.`, [
+              { text: "Annuler", style: "cancel" },
+              {
+                text: "Supprimer définitivement",
+                style: "destructive",
+                onPress: async () => {
+                  try {
+                    await budgetService.deleteBudget(existing.id);
+                    // Budget partagé : le groupe associé n'a plus d'usage.
+                    if (shared) await supabase.from("groups").delete().eq("id", existing.owner_id);
+                    useBudgetStore.getState().deleteBudget(existing.id);
+                    router.dismissAll();
+                  } catch (err) {
+                    Alert.alert("Suppression impossible", getErrorMessage(err, "Une erreur est survenue."));
+                  }
+                },
+              },
+            ]),
+        },
+      ],
+    );
+  };
 
   const initialAmount = parseAmount(initialAmountRaw);
 
   const handleSubmit = async () => {
     const trimmed = name.trim();
     if (!trimmed) return;
+    if (existing) return handleUpdate();
 
     setIsSubmitting(true);
 
@@ -196,7 +284,7 @@ export default function AddBudgetScreen() {
     }
   };
 
-  const canSubmit = name.trim().length > 0 && !isSubmitting;
+  const canSubmit = name.trim().length > 0 && !isSubmitting && canEdit;
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
@@ -223,12 +311,22 @@ export default function AddBudgetScreen() {
           </View>
 
           {/* Partage */}
+          {existing && !canEdit && role && (
+            <View style={[styles.shareHint, { backgroundColor: c.surfaceAlt }]}>
+              <Ionicons name="lock-closed-outline" size={18} color={c.textMuted} />
+              <Text style={[styles.shareHintText, { color: c.text }]}>
+                Seul le propriétaire de ce budget partagé peut le modifier.
+              </Text>
+            </View>
+          )}
+          {!existing && (
           <View style={[styles.shareHint, { backgroundColor: c.tintMuted }]}>
             <Ionicons name="people-outline" size={18} color={c.tint} />
             <Text style={[styles.shareHintText, { color: c.text }]}>
               Pour gérer ce budget à plusieurs, créez-le puis touchez « Partager le budget » dans le Profil.
             </Text>
           </View>
+          )}
 
           {/* Name */}
           <SectionLabel label="NOM DU BUDGET" color={c.textSubtle} />
@@ -305,8 +403,14 @@ export default function AddBudgetScreen() {
             />
           </View>
 
-          {/* Currency */}
+          {/* Currency (non modifiable ensuite : les montants ne sont pas convertis) */}
           <SectionLabel label="DEVISE" color={c.textSubtle} />
+          {existing ? (
+            <Text style={[styles.inputHint, { color: c.textSubtle }]}>
+              {selectedCurrency.label} ({selectedCurrency.code}). La devise ne peut pas être changée : les montants
+              enregistrés ne seraient pas convertis.
+            </Text>
+          ) : (
           <View style={styles.currencyGrid}>
             {CURRENCIES.map((currency) => {
               const active = selectedCurrency.code === currency.code;
@@ -338,6 +442,7 @@ export default function AddBudgetScreen() {
               );
             })}
           </View>
+          )}
 
           {/* Color theme — repère discret par budget, pas de fond dégradé */}
           <SectionLabel label="COULEUR DU BUDGET" color={c.textSubtle} />
@@ -362,6 +467,22 @@ export default function AddBudgetScreen() {
               );
             })}
           </View>
+
+          {canDelete && (
+            <View style={[styles.dangerZone, { borderColor: c.danger + "40" }]}>
+              <Text style={[styles.dangerTitle, { color: c.danger }]}>Zone sensible</Text>
+              <Text style={[styles.inputHint, { color: c.textMuted, marginTop: 0 }]}>
+                Supprime le budget et tout son contenu
+                {existing?.owner_type === "group" ? ", pour tous les membres" : ""}.
+              </Text>
+              <Button
+                label="Supprimer ce budget"
+                variant="destructive"
+                onPress={handleDelete}
+                icon={<Ionicons name="trash-outline" size={18} color={c.danger} />}
+              />
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -373,11 +494,11 @@ export default function AddBudgetScreen() {
         ]}
       >
         <Button
-          label="Créer le budget"
+          label={existing ? "Enregistrer" : "Créer le budget"}
           onPress={handleSubmit}
           disabled={!canSubmit}
           loading={isSubmitting}
-          icon={<Ionicons name="add-circle-outline" size={20} color="#fff" />}
+          icon={<Ionicons name={existing ? "checkmark-circle-outline" : "add-circle-outline"} size={20} color="#fff" />}
           style={Shadow.md}
         />
       </View>
@@ -389,6 +510,8 @@ export default function AddBudgetScreen() {
 const styles = StyleSheet.create({
   shareHint: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: Radius.md, marginBottom: 8 },
   shareHintText: { flex: 1, fontSize: 13, lineHeight: 19 },
+  dangerZone: { marginTop: 24, gap: 10, padding: 14, borderRadius: Radius.lg, borderWidth: 1 },
+  dangerTitle: { fontSize: 13, fontWeight: "800", letterSpacing: 0.3 },
   root: { flex: 1 },
   scroll: { paddingHorizontal: 16, paddingTop: 20, gap: 10 },
   sectionLabel: {
