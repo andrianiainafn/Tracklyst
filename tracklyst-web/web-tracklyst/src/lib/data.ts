@@ -355,3 +355,16 @@ export async function updateGoal(
 export async function deleteGoal(id: string) {
   check(await supabase.from("goals").delete().eq("id", id));
 }
+
+export async function updateBudget(id: string, input: { name: string; theme: string; initial_amount: number }) {
+  check(await supabase.from("budgets").update(input).eq("id", id));
+}
+
+/**
+ * Supprime le budget et tout son contenu (suppression en cascade côté base).
+ * Budget partagé : le groupe associé est supprimé aussi.
+ */
+export async function deleteBudget(budget: Pick<Budget, "id" | "owner_type" | "owner_id">) {
+  check(await supabase.from("budgets").delete().eq("id", budget.id));
+  if (budget.owner_type === "group") check(await supabase.from("groups").delete().eq("id", budget.owner_id));
+}

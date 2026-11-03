@@ -1,6 +1,6 @@
 "use client";
 
-import { mdiAccountMultiple, mdiCheckCircle, mdiKeyVariant, mdiPlus, mdiWalletOutline } from "@mdi/js";
+import { mdiAccountMultiple, mdiCheckCircle, mdiKeyVariant, mdiPencilOutline, mdiPlus, mdiWalletOutline } from "@mdi/js";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Icon, Sheet, cx } from "@/components/ui";
@@ -28,16 +28,19 @@ export function BudgetSwitcher({ open, onClose }: { open: boolean; onClose: () =
           const active = b.id === activeBudgetId;
           const bal = balances[b.id];
           return (
-            <button
+            <div
               key={b.id}
+              className={cx(
+                "flex items-center gap-2 rounded-[18px] border-[1.5px] pr-2",
+                active ? "border-tint bg-tint-muted" : "border-transparent bg-surface-alt",
+              )}
+            >
+            <button
               onClick={async () => {
                 onClose();
                 if (!active) await selectBudget(b.id);
               }}
-              className={cx(
-                "flex items-center gap-3 rounded-[18px] border-[1.5px] p-3 text-left active:opacity-75",
-                active ? "border-tint bg-tint-muted" : "border-transparent bg-surface-alt",
-              )}
+              className="flex min-w-0 flex-1 items-center gap-3 p-3 text-left active:opacity-75"
             >
               <span
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-white"
@@ -56,11 +59,20 @@ export function BudgetSwitcher({ open, onClose }: { open: boolean; onClose: () =
                 </span>
               </span>
               {active ? (
-                <Icon path={mdiCheckCircle} size={22} className="text-tint" />
+                <Icon path={mdiCheckCircle} size={22} className="shrink-0 text-tint" />
               ) : (
-                <span className="h-5 w-5 rounded-full border-2 border-line" />
+                <span className="h-5 w-5 shrink-0 rounded-full border-2 border-line" />
               )}
             </button>
+            <Link
+              href={`/budgets/${b.id}/edit`}
+              onClick={onClose}
+              aria-label={`Modifier ${b.name}`}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface text-muted active:opacity-60"
+            >
+              <Icon path={mdiPencilOutline} size={17} />
+            </Link>
+            </div>
           );
         })}
         <Link
