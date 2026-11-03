@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { mdiCalendarOutline, mdiCheckBold, mdiCheckCircle, mdiChevronRight } from "@mdi/js";
+import { mdiCalendarOutline, mdiCheckBold, mdiCheckCircle, mdiChevronRight, mdiPlus } from "@mdi/js";
 import { Card, ErrorBanner, Icon, ProgressRing, SectionTitle, cx } from "@/components/ui";
 import { daysUntil, money, moneyCompact } from "@/lib/format";
 import { iconForLabel, iconPath } from "@/lib/icons";
@@ -34,9 +34,18 @@ export default function GoalsPage() {
 
   return (
     <main className="flex flex-col gap-3.5 px-4 pt-[calc(16px+env(safe-area-inset-top))]">
-      <header>
-        <h1 className="text-[26px] font-extrabold tracking-tight">Objectifs</h1>
-        <p className="text-[13px] text-muted">Épargnez pour vos projets</p>
+      <header className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-[26px] font-extrabold tracking-tight">Objectifs</h1>
+          <p className="text-[13px] text-muted">Épargnez pour vos projets</p>
+        </div>
+        <Link
+          href="/goals/new"
+          className="flex h-10 shrink-0 items-center gap-1.5 rounded-[12px] bg-tint px-3.5 text-[14px] font-bold text-white active:scale-95"
+        >
+          <Icon path={mdiPlus} size={18} />
+          Nouveau
+        </Link>
       </header>
 
       <Card className="flex items-center gap-[18px] p-[18px]">
@@ -63,7 +72,7 @@ export default function GoalsPage() {
       {error && <ErrorBanner message={error} />}
       {loaded && visible.length === 0 && (
         <p className="py-10 text-center text-sm text-muted">
-          Aucun objectif. Créez-en un depuis l&apos;application mobile (voyage, terrain, fonds d&apos;urgence…).
+          Aucun objectif pour l&apos;instant. Touchez « Nouveau » pour en créer un (terrain, voyage, fonds d&apos;urgence…).
         </p>
       )}
 

@@ -13,11 +13,13 @@ import {
   mdiTrendingUp,
 } from "@mdi/js";
 import { BudgetSwitcher } from "@/components/BudgetSwitcher";
+import { QuickActions } from "@/components/QuickActions";
 import { Card, CategoryIcon, ErrorBanner, Icon, Meter, SectionTitle, cx } from "@/components/ui";
 import { confirmSubscription, errorMessage, skipSubscription } from "@/lib/data";
 import { amountOnly, capitalize, currencySymbol, daysUntil, money, moneyCompact } from "@/lib/format";
 import { iconForLabel } from "@/lib/icons";
 import { monthlyCost } from "@/lib/schedule";
+import { resolveBudgetTheme } from "@/lib/themes";
 import { categoryBreakdown, currentAndPreviousKeys, dueSubscriptions, monthLimits, monthTotals } from "@/lib/stats";
 import type { Subscription } from "@/lib/types";
 import { useActiveBudget, useApp } from "@/stores/app";
@@ -41,7 +43,10 @@ export default function HomePage() {
     return (
       <main className="flex min-h-[70dvh] flex-col items-center justify-center gap-2 px-6 text-center">
         <h1 className="text-xl font-extrabold">Aucun budget</h1>
-        <p className="text-sm text-muted">Créez votre premier budget depuis l&apos;application mobile.</p>
+        <p className="text-sm text-muted">Créez votre premier budget pour commencer à suivre vos finances.</p>
+        <Link href="/budgets/new" className="mt-3 inline-flex h-12 items-center rounded-[14px] bg-tint px-6 text-[15px] font-bold text-white">
+          Créer un budget
+        </Link>
       </main>
     );
   }
@@ -60,7 +65,7 @@ export default function HomePage() {
             onClick={() => setSwitcherOpen(true)}
             className="flex min-w-0 items-center gap-2 rounded-full bg-surface-alt py-2 pl-3 pr-2.5 text-sm font-bold active:opacity-70"
           >
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-tint" />
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: budget ? resolveBudgetTheme(budget).to : "var(--tint)" }} />
             <span className="truncate">{budget?.name ?? "…"}</span>
             <Icon path={mdiChevronDown} size={18} className="shrink-0 text-muted" />
           </button>
@@ -106,17 +111,18 @@ export default function HomePage() {
             ))}
           </div>
         )}
-        <div className="flex items-center gap-3">
+        <Link href="/subscriptions/new" className="flex items-center gap-3 active:opacity-75">
           <CategoryIcon iconKey="autorenew" color="#8B5CF6" size={40} />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold">Abonnements</p>
             <p className="text-xs text-muted">
               {activeSubs.length === 0
-                ? "Ajoutez-les depuis l'application mobile"
+                ? "Loyer, internet, électricité… Ajoutez-en un"
                 : `${activeSubs.length} actif${activeSubs.length > 1 ? "s" : ""} · ${money(activeSubs.reduce((a, x) => a + monthlyCost(x), 0), currency)} / mois`}
             </p>
           </div>
-        </div>
+          <Icon path={mdiPlus} size={20} className="shrink-0 text-subtle" />
+        </Link>
       </Card>
 
       {/* Plafonds + épargne */}
@@ -199,13 +205,7 @@ export default function HomePage() {
         )}
       </Card>
 
-      <Link
-        href="/transactions/new"
-        aria-label="Nouvelle transaction"
-        className="fixed bottom-[calc(96px+env(safe-area-inset-bottom))] right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-tint text-white shadow-lg active:scale-95 sm:right-[calc(50%-208px)]"
-      >
-        <Icon path={mdiPlus} size={26} />
-      </Link>
+      <QuickActions />
 
       <BudgetSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
     </main>

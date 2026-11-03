@@ -202,3 +202,17 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 export function ErrorBanner({ message }: { message: string }) {
   return <div className="rounded-[14px] bg-danger-muted px-4 py-3 text-[13px] text-danger">{message}</div>;
 }
+
+export const inputClass =
+  "h-12 w-full min-w-0 rounded-[14px] border border-line bg-surface px-4 text-[15px] outline-none placeholder:text-subtle focus:border-tint";
+
+/** Libellé + champ de formulaire. */
+export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <label className="flex min-w-0 flex-col gap-1.5">
+      <span className="text-[13px] font-semibold text-muted">{label}</span>
+      {children}
+      {hint && <span className="text-xs text-subtle">{hint}</span>}
+    </label>
+  );
+}

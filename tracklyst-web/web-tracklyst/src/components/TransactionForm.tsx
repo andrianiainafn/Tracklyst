@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { mdiCheck } from "@mdi/js";
+import { AddDefaultCategories } from "@/components/AddDefaultCategories";
 import { Button, CategoryIcon, Icon, Segmented, cx } from "@/components/ui";
 import { deleteTransaction, errorMessage, saveTransaction } from "@/lib/data";
 import { currencySymbol, money, parseAmount, todayISO } from "@/lib/format";
@@ -102,10 +103,7 @@ export function TransactionForm({
       <section className="flex flex-col gap-2.5">
         <h2 className="text-[13px] font-semibold text-muted">Catégorie</h2>
         {list.length === 0 ? (
-          <p className="rounded-[14px] bg-surface-alt p-4 text-center text-[13px] text-muted">
-            Aucune catégorie de {type === "income" ? "revenu" : "dépense"}. Ajoutez-en depuis l&apos;application mobile
-            (Paramètres → Catégories).
-          </p>
+          <AddDefaultCategories label={`Aucune catégorie de ${type === "income" ? "revenu" : "dépense"} dans ce budget.`} />
         ) : (
           <div className="grid grid-cols-4 gap-2">
             {list.map((c) => {

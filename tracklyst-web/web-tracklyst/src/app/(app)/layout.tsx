@@ -57,7 +57,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isTab = TABS.some((t) => t.href === pathname);
 
   return (
-    <div className="mx-auto min-h-dvh w-full max-w-md">
+    <div className="mx-auto min-h-dvh w-full max-w-md [overflow-x:clip]">
       <div className={cx(isTab && "pb-[calc(84px+env(safe-area-inset-bottom))]")}>{children}</div>
       {isTab && (
         <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg">

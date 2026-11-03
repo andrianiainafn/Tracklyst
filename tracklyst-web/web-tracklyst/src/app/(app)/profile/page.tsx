@@ -57,7 +57,7 @@ export default function ProfilePage() {
       </Card>
 
       <p className="px-1 text-xs leading-relaxed text-subtle">
-        Catégories, plafonds, abonnements et création d&apos;objectifs se gèrent pour l&apos;instant dans l&apos;application mobile.
+        La personnalisation des catégories et des plafonds se fait pour l&apos;instant dans l&apos;application mobile.
         Tout est synchronisé : c&apos;est le même compte.
       </p>
 

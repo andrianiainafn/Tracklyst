@@ -59,6 +59,7 @@
 
 html,
 body {
+  max-width: 100%;
   background: var(--bg);
   color: var(--text);
   -webkit-tap-highlight-color: transparent;
@@ -143,4 +144,15 @@ html {
   }
   .reveal { opacity: 1; transform: none; transition: none; }
   html { scroll-behavior: auto; }
+}
+
+/* Garde-fou contre le défilement horizontal : html seul (body reste sans
+   overflow, sinon les en-têtes « sticky » ne collent plus). */
+html {
+  overflow-x: hidden;
+}
+@supports (overflow: clip) {
+  html {
+    overflow-x: clip;
+  }
 }

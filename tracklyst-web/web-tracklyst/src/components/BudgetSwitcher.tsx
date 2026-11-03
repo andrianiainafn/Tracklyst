@@ -1,10 +1,12 @@
 "use client";
 
-import { mdiCheckCircle, mdiWalletOutline } from "@mdi/js";
+import { mdiCheckCircle, mdiPlus, mdiWalletOutline } from "@mdi/js";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Icon, Sheet, cx } from "@/components/ui";
 import { getAvailableBalance } from "@/lib/data";
 import { currencySymbol, money } from "@/lib/format";
+import { resolveBudgetTheme } from "@/lib/themes";
 import { useApp } from "@/stores/app";
 
 /** Panneau du bas : choisir le budget actif (solde masqué selon l'œil). */
@@ -37,7 +39,10 @@ export function BudgetSwitcher({ open, onClose }: { open: boolean; onClose: () =
                 active ? "border-tint bg-tint-muted" : "border-transparent bg-surface-alt",
               )}
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-tint text-white">
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-white"
+                style={{ background: resolveBudgetTheme(b).to }}
+              >
                 <Icon path={mdiWalletOutline} size={20} />
               </span>
               <span className="min-w-0 flex-1">
@@ -58,6 +63,14 @@ export function BudgetSwitcher({ open, onClose }: { open: boolean; onClose: () =
             </button>
           );
         })}
+        <Link
+          href="/budgets/new"
+          onClick={onClose}
+          className="mt-1 flex items-center justify-center gap-1.5 rounded-[14px] border border-dashed border-tint py-3.5 text-[15px] font-bold text-tint active:opacity-75"
+        >
+          <Icon path={mdiPlus} size={20} />
+          Nouveau budget
+        </Link>
       </div>
     </Sheet>
   );

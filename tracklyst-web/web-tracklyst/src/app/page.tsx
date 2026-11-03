@@ -330,7 +330,7 @@ function BudgetsVisual() {
 
 export default function LandingPage() {
   return (
-    <div className="min-h-dvh overflow-x-clip bg-[#030807] text-white [color-scheme:dark]">
+    <div className="relative min-h-dvh w-full overflow-hidden bg-[#030807] text-white [color-scheme:dark]">
       {/* Navigation */}
       <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-6">
         <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between rounded-2xl border border-white/[0.08] bg-[#030807]/60 pl-4 pr-2 backdrop-blur-xl">
@@ -402,7 +402,7 @@ export default function LandingPage() {
           </div>
 
           {/* Catégories qui défilent */}
-          <div className="relative mt-10 border-y border-white/[0.06] bg-white/[0.015] py-5 [mask-image:linear-gradient(90deg,transparent,black_12%,black_88%,transparent)]">
+          <div className="relative mt-10 overflow-hidden border-y border-white/[0.06] bg-white/[0.015] py-5 [mask-image:linear-gradient(90deg,transparent,black_12%,black_88%,transparent)]">
             <div className="animate-marquee flex w-max gap-3">
               {[...CHIPS, ...CHIPS].map((c, i) => (
                 <span
