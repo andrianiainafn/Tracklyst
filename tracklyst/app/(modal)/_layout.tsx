@@ -76,6 +76,14 @@ export default function ModalLayout() {
         options={{ ...commonOptions, title: "Catégorie" }}
       />
       <Stack.Screen
+        name="share-budget"
+        options={{ ...commonOptions, title: "Partager le budget" }}
+      />
+      <Stack.Screen
+        name="join-budget"
+        options={{ ...commonOptions, title: "Rejoindre un budget" }}
+      />
+      <Stack.Screen
         name="settings"
         options={{ ...commonOptions, title: "Paramètres" }}
       />

@@ -218,6 +218,29 @@ export default function ProfileScreen() {
           />
         </MenuSection>
 
+        <MenuSection title="PARTAGE" c={c}>
+          <MenuRow
+            icon="account-multiple-plus-outline"
+            tint="#0EA5E9"
+            label="Partager le budget"
+            detail={
+              activeBudget
+                ? `${activeBudget.name}${activeBudget.owner_type === "group" ? " · partagé" : ""}`
+                : undefined
+            }
+            onPress={() => router.push("/(modal)/share-budget" as any)}
+            c={c}
+          />
+          <MenuRow
+            icon="key-variant"
+            tint="#F59E0B"
+            label="Rejoindre un budget"
+            detail="Avec un code reçu"
+            onPress={() => router.push("/(modal)/join-budget" as any)}
+            c={c}
+          />
+        </MenuSection>
+
         <MenuSection title="COMPTE" c={c}>
           <MenuRow
             icon="cog-outline"

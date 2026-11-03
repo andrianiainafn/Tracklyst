@@ -27,6 +27,7 @@ export function BudgetSwitcherSheet({
   balances,
   onSelect,
   onCreate,
+  onJoin,
   onClose,
 }: {
   visible: boolean;
@@ -35,6 +36,7 @@ export function BudgetSwitcherSheet({
   balances: Record<string, number | undefined>;
   onSelect: (budget: Budget) => void;
   onCreate: () => void;
+  onJoin: () => void;
   onClose: () => void;
 }) {
   const isDark = useColorScheme() === "dark";
@@ -73,7 +75,7 @@ export function BudgetSwitcherSheet({
                 ]}
               >
                 <View style={[styles.icon, { backgroundColor: theme.to }]}>
-                  <MaterialCommunityIcons name="wallet-outline" size={20} color="#fff" />
+                  <MaterialCommunityIcons name={b.owner_type === "group" ? "account-multiple" : "wallet-outline"} size={20} color="#fff" />
                 </View>
                 <View style={styles.rowBody}>
                   <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>
@@ -103,6 +105,10 @@ export function BudgetSwitcherSheet({
         >
           <Ionicons name="add" size={18} color={c.tint} />
           <Text style={[styles.createText, { color: c.tint }]}>Nouveau budget</Text>
+        </Pressable>
+        <Pressable onPress={onJoin} hitSlop={8} style={({ pressed }) => [styles.join, pressed && { opacity: 0.6 }]}>
+          <MaterialCommunityIcons name="key-variant" size={16} color={c.textMuted} />
+          <Text style={[styles.joinText, { color: c.textMuted }]}>Rejoindre un budget avec un code</Text>
         </Pressable>
       </View>
     </Modal>
@@ -148,4 +154,6 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
   },
   createText: { fontSize: 15, fontWeight: "700" },
+  join: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 4 },
+  joinText: { fontSize: 14, fontWeight: "600" },
 });

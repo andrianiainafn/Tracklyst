@@ -28,11 +28,6 @@ const CURRENCIES = [
   { code: "USD", symbol: "$", label: "Dollar américain" },
 ];
 
-const BUDGET_TYPES = [
-  { id: "user", label: "Personnel", icon: "person-outline" as const },
-  { id: "group", label: "Groupe", icon: "people-outline" as const },
-];
-
 // ─── Formatters ───────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
   new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n);
@@ -144,7 +139,6 @@ export default function AddBudgetScreen() {
   const [initialAmountRaw, setInitialAmountRaw] = useState("");
   const [selectedTheme, setSelectedTheme] = useState(BUDGET_THEMES[0]);
   const [selectedCurrency, setSelectedCurrency] = useState(CURRENCIES[0]);
-  const [budgetType, setBudgetType] = useState<"user" | "group">("user");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { addBudget, setActiveBudget } = useBudgetStore();
@@ -169,7 +163,7 @@ export default function AddBudgetScreen() {
 
       const dto = {
         name: trimmed,
-        owner_type: budgetType,
+        owner_type: "user" as const,
         owner_id: user.id,
         currency: selectedCurrency.code,
         initial_amount: initialAmount,
@@ -228,27 +222,12 @@ export default function AddBudgetScreen() {
             />
           </View>
 
-          {/* Type */}
-          <SectionLabel label="TYPE DE BUDGET" color={c.textSubtle} />
-          <View style={styles.typeRow}>
-            {BUDGET_TYPES.map((type) => {
-              const active = budgetType === type.id;
-              return (
-                <TouchableOpacity
-                  key={type.id}
-                  onPress={() => setBudgetType(type.id as "user" | "group")}
-                  style={[
-                    styles.typeBtn,
-                    { backgroundColor: active ? c.tint : c.surface, borderColor: active ? c.tint : c.border },
-                  ]}
-                >
-                  <Ionicons name={type.icon} size={18} color={active ? "#fff" : c.textMuted} />
-                  <Text style={[styles.typeBtnText, { color: active ? "#fff" : c.text }]}>
-                    {type.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+          {/* Partage */}
+          <View style={[styles.shareHint, { backgroundColor: c.tintMuted }]}>
+            <Ionicons name="people-outline" size={18} color={c.tint} />
+            <Text style={[styles.shareHintText, { color: c.text }]}>
+              Pour gérer ce budget à plusieurs, créez-le puis touchez « Partager le budget » dans le Profil.
+            </Text>
           </View>
 
           {/* Name */}
@@ -408,6 +387,8 @@ export default function AddBudgetScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  shareHint: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: Radius.md, marginBottom: 8 },
+  shareHintText: { flex: 1, fontSize: 13, lineHeight: 19 },
   root: { flex: 1 },
   scroll: { paddingHorizontal: 16, paddingTop: 20, gap: 10 },
   sectionLabel: {
