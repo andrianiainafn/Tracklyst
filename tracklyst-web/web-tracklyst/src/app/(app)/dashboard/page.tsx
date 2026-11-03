@@ -9,10 +9,11 @@ import {
   mdiEyeOffOutline,
   mdiEyeOutline,
   mdiPlus,
+  mdiSwapHorizontal,
   mdiTrendingDown,
   mdiTrendingUp,
 } from "@mdi/js";
-import { AccountBadge } from "@/components/AccountPicker";
+import { AccountIcon, accountName } from "@/components/AccountChooser";
 import { BudgetSwitcher } from "@/components/BudgetSwitcher";
 import { QuickActions } from "@/components/QuickActions";
 import { Card, CategoryIcon, ErrorBanner, Icon, Meter, SectionTitle, cx } from "@/components/ui";
@@ -38,6 +39,7 @@ export default function HomePage() {
   const breakdown = categoryBreakdown(s.transactions, keys.current);
   const due = dueSubscriptions(s.subscriptions);
   const activeSubs = s.subscriptions.filter((x) => x.is_active);
+  const activeAccounts = s.accounts.filter((a) => !a.is_archived);
   const monthLabel = capitalize(new Date().toLocaleDateString("fr-FR", { month: "long" }));
 
   if (s.loaded && s.budgets.length === 0) {
@@ -78,10 +80,7 @@ export default function HomePage() {
             <Icon path={s.hidden ? mdiEyeOffOutline : mdiEyeOutline} size={18} />
           </button>
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] font-bold tracking-[0.1em] text-subtle">SOLDE DISPONIBLE</p>
-          {budget && <AccountBadge budget={budget} />}
-        </div>
+        <p className="text-[11px] font-bold tracking-[0.1em] text-subtle">SOLDE DISPONIBLE</p>
         <button onClick={s.toggleHidden} className="mt-1 text-left">
           <span className="text-[34px] font-extrabold tracking-[-0.03em]">
             {s.hidden ? "•••••••" : amountOnly(s.balance)}
@@ -91,6 +90,45 @@ export default function HomePage() {
         {s.budgets.length > 1 && (
           <p className="mt-2 text-xs text-subtle">{s.budgets.length} budgets · touchez le nom pour changer</p>
         )}
+
+        {/* Répartition sur les comptes */}
+        <div className="-mx-[18px] mt-4 border-t border-line px-[18px] pt-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[11px] font-bold tracking-[0.1em] text-subtle">RÉPARTITION</p>
+            <div className="flex items-center gap-3 text-[12px] font-bold text-tint">
+              {activeAccounts.length > 1 && (
+                <Link href="/accounts/transfer" className="flex items-center gap-1">
+                  <Icon path={mdiSwapHorizontal} size={15} />
+                  Transférer
+                </Link>
+              )}
+              <Link href="/accounts">Comptes</Link>
+            </div>
+          </div>
+          {activeAccounts.length === 0 ? (
+            <Link href="/accounts/new" className="block rounded-[14px] bg-surface-alt px-3 py-2.5 text-center text-[13px] font-semibold text-tint">
+              Ajouter un compte (MVola, banque, espèces…)
+            </Link>
+          ) : (
+            <div className="-mx-[18px] flex gap-2 overflow-x-auto px-[18px] pb-0.5 [scrollbar-width:none]">
+              {activeAccounts.map((a) => (
+                <Link
+                  key={a.id}
+                  href={`/accounts/${a.id}`}
+                  className="flex shrink-0 items-center gap-2 rounded-[14px] bg-surface-alt py-2 pl-2 pr-3 active:opacity-70"
+                >
+                  <AccountIcon account={a} size={28} />
+                  <span className="leading-tight">
+                    <span className="block max-w-[110px] truncate text-[12px] font-bold">{accountName(a)}</span>
+                    <span className="block text-[12px] text-muted">
+                      {s.hidden ? "•••••" : moneyCompact(s.accountBalances[a.id] ?? 0, currency)}
+                    </span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </Card>
 
       {s.error && <ErrorBanner message={s.error} />}

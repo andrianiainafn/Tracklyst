@@ -4,7 +4,8 @@ import { Card } from "@/src/components/ui/Card";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { useActiveBudget } from "@/src/features/budgets/hooks/useActiveBudget";
 import { useBudgets } from "@/src/features/budgets/hooks/useBudgets";
-import { AccountBadge } from "@/src/features/budgets/components/AccountBadge";
+import { AccountIcon, accountName } from "@/src/features/accounts/components/AccountIcon";
+import { useAccountStore } from "@/src/features/accounts/store/accountStore";
 import { BudgetSwitcherSheet } from "@/src/features/budgets/components/BudgetSwitcherSheet";
 import { budgetService } from "@/src/features/budgets/services/budgetService";
 import { CashflowChart } from "@/src/features/dashboard/components/CashflowChart";
@@ -25,7 +26,7 @@ import { usePrivacyStore } from "@/src/features/privacy/store/privacyStore";
 import { goalService } from "@/src/features/goals/services/goalService";
 import { transactionService } from "@/src/features/transaction/services/transactionService";
 import { getCurrencySymbol } from "@/src/utils/currency";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -158,13 +159,22 @@ export default function HomeScreen() {
     loadStatsForAllBudgets();
   }, [loadStatsForAllBudgets]);
 
+  // Comptes du budget actif (répartition sous le solde)
+  const accountsBudgetId = useAccountStore((st) => st.budgetId);
+  const allAccounts = useAccountStore((st) => st.accounts);
+  const accountBalances = useAccountStore((st) => st.balances);
+  const loadAccounts = useAccountStore((st) => st.load);
+  const activeBudgetId = activeBudget?.id;
+  const activeAccounts = accountsBudgetId === activeBudget?.id ? allAccounts.filter((a) => !a.is_archived) : [];
+
   useFocusEffect(
     useCallback(() => {
       if (budgets.length > 0) loadStatsForAllBudgets();
       refreshMonthly();
       refreshSubscriptions();
       refreshDashboard();
-    }, [budgets.length, loadStatsForAllBudgets, refreshMonthly, refreshSubscriptions, refreshDashboard])
+      if (activeBudgetId) loadAccounts(activeBudgetId).catch(() => {});
+    }, [budgets.length, loadStatsForAllBudgets, refreshMonthly, refreshSubscriptions, refreshDashboard, activeBudgetId, loadAccounts])
   );
 
   // Stats du budget actif (pour le hero + pills)
@@ -246,7 +256,6 @@ export default function HomeScreen() {
               <Text style={[styles.balanceLabel, { color: c.textSubtle }]}>
                 SOLDE DISPONIBLE
               </Text>
-              <AccountBadge budget={activeBudget} />
             </View>
             {isLoading && budgets.length === 0 ? (
               <ActivityIndicator color={c.tint} style={{ marginTop: 8, alignSelf: "flex-start" }} />
@@ -265,6 +274,52 @@ export default function HomeScreen() {
                 {budgets.length} budgets · touchez le nom pour changer
               </Text>
             )}
+
+            {/* Répartition sur les comptes */}
+            <View style={[styles.split, { borderTopColor: c.border }]}>
+              <View style={styles.splitHeader}>
+                <Text style={[styles.balanceLabel, { color: c.textSubtle }]}>RÉPARTITION</Text>
+                <View style={styles.splitLinks}>
+                  {activeAccounts.length > 1 && (
+                    <Pressable onPress={() => router.push("/(modal)/transfer" as any)} hitSlop={6} style={styles.splitLink}>
+                      <MaterialCommunityIcons name="swap-horizontal" size={15} color={c.tint} />
+                      <Text style={[styles.splitLinkText, { color: c.tint }]}>Transférer</Text>
+                    </Pressable>
+                  )}
+                  <Pressable onPress={() => router.push("/(modal)/accounts" as any)} hitSlop={6}>
+                    <Text style={[styles.splitLinkText, { color: c.tint }]}>Comptes</Text>
+                  </Pressable>
+                </View>
+              </View>
+              {activeAccounts.length === 0 ? (
+                <Pressable
+                  onPress={() => router.push("/(modal)/account-form" as any)}
+                  style={[styles.splitEmpty, { backgroundColor: c.surfaceAlt }]}
+                >
+                  <Text style={[styles.splitLinkText, { color: c.tint }]}>Ajouter un compte (MVola, banque, espèces…)</Text>
+                </Pressable>
+              ) : (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.splitRow}>
+                  {activeAccounts.map((a) => (
+                    <Pressable
+                      key={a.id}
+                      onPress={() => router.push({ pathname: "/(modal)/account-form", params: { id: a.id } } as any)}
+                      style={({ pressed }) => [styles.splitChip, { backgroundColor: c.surfaceAlt }, pressed && { opacity: 0.7 }]}
+                    >
+                      <AccountIcon account={a} size={28} />
+                      <View style={{ maxWidth: 110 }}>
+                        <Text numberOfLines={1} style={[styles.splitName, { color: c.text }]}>
+                          {accountName(a)}
+                        </Text>
+                        <Text style={[styles.splitAmount, { color: c.textMuted }]}>
+                          {hidden ? "•••••" : fmt(accountBalances[a.id] ?? 0)}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
           </Card>
         )}
 
@@ -470,6 +525,16 @@ const styles = StyleSheet.create({
   budgetDot: { width: 10, height: 10, borderRadius: 5 },
   budgetPillText: { fontSize: 14, fontWeight: "700", flexShrink: 1 },
   balanceHint: { fontSize: 12, marginTop: 8 },
+  split: { marginTop: 16, marginHorizontal: -18, paddingHorizontal: 18, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, gap: 8 },
+  splitHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  splitLinks: { flexDirection: "row", alignItems: "center", gap: 14 },
+  splitLink: { flexDirection: "row", alignItems: "center", gap: 4 },
+  splitLinkText: { fontSize: 12, fontWeight: "700" },
+  splitEmpty: { borderRadius: Radius.md, paddingVertical: 10, alignItems: "center" },
+  splitRow: { gap: 8, paddingRight: 8 },
+  splitChip: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: Radius.md, paddingVertical: 8, paddingLeft: 8, paddingRight: 12 },
+  splitName: { fontSize: 12, fontWeight: "700" },
+  splitAmount: { fontSize: 12, marginTop: 1 },
   balanceLabelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   balanceLabel: {
     fontSize: 11,

@@ -91,7 +91,7 @@ export default function NewBudgetPage() {
           />
         </Field>
 
-        <Field label="Où est cet argent ?" hint="MVola, compte bancaire, caisse d'épargne… Une étiquette pour savoir où se trouve l'argent.">
+        <Field label="Premier compte : où est cet argent ?" hint="MVola, compte bancaire, espèces… Vous pourrez ajouter d'autres comptes ensuite et y répartir l'argent.">
           <AccountPicker
             kind={accountKind}
             name={accountName}
@@ -103,7 +103,7 @@ export default function NewBudgetPage() {
           />
         </Field>
 
-        <Field label="Solde de départ" hint="L'argent déjà disponible dans ce budget (0 si vous partez de zéro).">
+        <Field label="Solde actuel de ce compte" hint="L'argent déjà disponible sur ce compte (0 si vous partez de zéro).">
           <div className="relative">
             <input
               inputMode="decimal"

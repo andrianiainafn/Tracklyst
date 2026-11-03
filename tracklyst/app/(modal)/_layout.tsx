@@ -76,6 +76,18 @@ export default function ModalLayout() {
         options={{ ...commonOptions, title: "Catégorie" }}
       />
       <Stack.Screen
+        name="accounts"
+        options={{ ...commonOptions, title: "Comptes" }}
+      />
+      <Stack.Screen
+        name="account-form"
+        options={{ ...commonOptions, title: "Compte" }}
+      />
+      <Stack.Screen
+        name="transfer"
+        options={{ ...commonOptions, title: "Transférer" }}
+      />
+      <Stack.Screen
         name="share-budget"
         options={{ ...commonOptions, title: "Partager le budget" }}
       />

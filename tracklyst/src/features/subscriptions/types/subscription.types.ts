@@ -14,6 +14,7 @@ export interface Subscription {
   end_date: string | null;
   next_occurrence: string; // "YYYY-MM-DD"
   is_active: boolean;
+  account_id?: string | null;
   created_at: string;
   updated_at: string;
 
@@ -34,6 +35,7 @@ export interface CreateSubscriptionDTO {
   description: string;
   frequency: SubscriptionFrequency;
   start_date: string;
+  account_id?: string | null;
 }
 
 export type UpdateSubscriptionDTO = Partial<
@@ -45,6 +47,7 @@ export type UpdateSubscriptionDTO = Partial<
     | "frequency"
     | "start_date"
     | "next_occurrence"
+    | "account_id"
     | "is_active"
   >
 >;

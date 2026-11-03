@@ -1,3 +1,4 @@
+import { accountService } from "@/src/features/accounts/services/accountService";
 import { Colors, Radius, Shadow } from "@/constants/theme";
 import { Button } from "@/src/components/ui/Button";
 import { Card } from "@/src/components/ui/Card";
@@ -18,6 +19,7 @@ import {
     Alert,
     KeyboardAvoidingView,
     Platform,
+    Pressable,
     ScrollView,
     StatusBar,
     StyleSheet,
@@ -144,6 +146,7 @@ export default function AddBudgetScreen() {
   const navigation = useNavigation();
   const params = useLocalSearchParams<{ id?: string }>();
   const { budgets, addBudget, setActiveBudget } = useBudgetStore();
+  const activeBudgetId = useBudgetStore((st) => st.activeBudget?.id);
   // Mode modification quand un id est passé (même écran que la création).
   const existing = params.id ? budgets.find((b) => b.id === params.id) : undefined;
 
@@ -198,8 +201,6 @@ export default function AddBudgetScreen() {
       const updated = await budgetService.updateBudget(existing.id, {
         name: name.trim(),
         theme: selectedTheme.id,
-        initial_amount: initialAmount,
-        ...account,
       });
       useBudgetStore.getState().updateBudget(existing.id, updated);
       router.back();
@@ -277,10 +278,8 @@ export default function AddBudgetScreen() {
         owner_type: "user" as const,
         owner_id: user.id,
         currency: selectedCurrency.code,
-        initial_amount: initialAmount,
+        initial_amount: 0,
         theme: selectedTheme.id,
-        account_kind: account.account_kind,
-        account_name: seal(account.account_name),
       };
 
       const { data: row, error: insertError } = await supabase
@@ -289,7 +288,16 @@ export default function AddBudgetScreen() {
         .select()
         .single();
       if (!insertError && budgetKey) await keyManager.registerBudgetKey(id, budgetKey);
-      const inserted = row && { ...row, name: trimmed, account_name: account.account_name };
+      // Le solde de départ appartient au premier compte (MVola, BNI…).
+      if (!insertError) {
+        await accountService.createAccount({
+          budget_id: id,
+          kind: account.account_kind ?? "other",
+          name: account.account_name || "Compte principal",
+          initial_amount: initialAmount,
+        });
+      }
+      const inserted = row && { ...row, name: trimmed };
 
       if (insertError) {
         Alert.alert(
@@ -373,8 +381,24 @@ export default function AddBudgetScreen() {
             )}
           </View>
 
+          {existing && (
+            <Pressable
+              onPress={() => {
+                if (activeBudgetId !== existing.id) setActiveBudget(existing);
+                router.push("/(modal)/accounts" as any);
+              }}
+              style={({ pressed }) => [styles.manageAccounts, { backgroundColor: c.surface, borderColor: c.border }, pressed && { opacity: 0.7 }]}
+            >
+              <Ionicons name="wallet-outline" size={18} color={c.tint} />
+              <Text style={[styles.manageAccountsText, { color: c.text }]}>Comptes et soldes de ce budget</Text>
+              <Ionicons name="chevron-forward" size={18} color={c.textSubtle} />
+            </Pressable>
+          )}
+
+          {!existing && (
+          <>
           {/* Où est l'argent */}
-          <SectionLabel label="OÙ EST CET ARGENT ?" color={c.textSubtle} />
+          <SectionLabel label="PREMIER COMPTE : OÙ EST CET ARGENT ?" color={c.textSubtle} />
           <AccountPicker
             kind={accountKindValue}
             name={accountName}
@@ -385,7 +409,7 @@ export default function AddBudgetScreen() {
             }}
           />
           <Text style={[styles.inputHint, { color: c.textSubtle, marginTop: 2 }]}>
-            MVola, compte bancaire, caisse d&apos;épargne… Une étiquette pour savoir où se trouve l&apos;argent.
+            MVola, compte bancaire, espèces… Vous pourrez ajouter d&apos;autres comptes ensuite et y répartir l&apos;argent.
           </Text>
 
           {/* Montant initial */}
@@ -422,6 +446,9 @@ export default function AddBudgetScreen() {
           <Text style={[styles.inputHint, { color: c.textSubtle }]}>
             Le montant que vous mettez dans ce budget au départ
           </Text>
+
+          </>
+          )}
 
           {/* Description */}
           <SectionLabel label="DESCRIPTION (OPTIONNEL)" color={c.textSubtle} />
@@ -552,6 +579,8 @@ export default function AddBudgetScreen() {
 const styles = StyleSheet.create({
   shareHint: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: Radius.md, marginBottom: 8 },
   shareHintText: { flex: 1, fontSize: 13, lineHeight: 19 },
+  manageAccounts: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderRadius: Radius.md, borderWidth: 1, marginBottom: 4 },
+  manageAccountsText: { flex: 1, fontSize: 15, fontWeight: "600" },
   dangerZone: { marginTop: 24, gap: 10, padding: 14, borderRadius: Radius.lg, borderWidth: 1 },
   dangerTitle: { fontSize: 13, fontWeight: "800", letterSpacing: 0.3 },
   root: { flex: 1 },

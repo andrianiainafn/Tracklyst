@@ -1,3 +1,5 @@
+import { AccountChooser } from "@/src/features/accounts/components/AccountChooser";
+import { lastAccountId, refreshAccounts, rememberAccount, useAccountStore } from "@/src/features/accounts/store/accountStore";
 import { Colors, Radius } from "@/constants/theme";
 import { Button } from "@/src/components/ui/Button";
 import { IconSymbol } from "@/src/components/ui/icon-symbol";
@@ -174,6 +176,7 @@ export default function AddTransaction() {
     description?: string;
     date?: string;
     budget_id?: string;
+    account_id?: string;
   }>();
   const isEditing = !!params.id;
 
@@ -225,6 +228,24 @@ export default function AddTransaction() {
   );
   const [isBalanceLoading, setIsBalanceLoading] = useState(false);
 
+  // ── Compte (MVola, BNI…) du budget sélectionné ────────────────────────────
+  const accounts = useAccountStore((s) => (s.budgetId === selectedBudget?.id ? s.accounts : []));
+  const accountBalances = useAccountStore((s) => s.balances);
+  const [accountChoice, setAccountChoice] = useState<string | null>(params.account_id || null);
+  const [lastAccount, setLastAccount] = useState<string | null>(null);
+  useEffect(() => {
+    if (!selectedBudget) return;
+    useAccountStore.getState().load(selectedBudget.id).catch(() => {});
+    lastAccountId(selectedBudget.id).then(setLastAccount);
+  }, [selectedBudget?.id]);
+  const activeAccounts = accounts.filter((a) => !a.is_archived);
+  // Compte proposé : celui de la transaction, sinon le dernier utilisé, sinon le premier.
+  const accountId =
+    (accountChoice && accounts.some((a) => a.id === accountChoice) ? accountChoice : null) ??
+    (lastAccount && activeAccounts.some((a) => a.id === lastAccount) ? lastAccount : null) ??
+    activeAccounts[0]?.id ??
+    null;
+
   const originalAmount = isEditing ? parseFloat(params.amount ?? "0") || 0 : 0;
   const originalType = params.type;
 
@@ -265,6 +286,7 @@ export default function AddTransaction() {
   const handleBudgetSelect = (b: Budget) => {
     setSelectedBudget(b);
     setCategoryId(null);
+    setAccountChoice(null);
   };
 
   useEffect(() => {
@@ -310,6 +332,7 @@ export default function AddTransaction() {
           category_id: categoryId,
           description: description.trim() || undefined,
           date,
+          account_id: accountId,
         });
       } else {
         await addTransaction({
@@ -319,8 +342,11 @@ export default function AddTransaction() {
           description: description.trim() || undefined,
           date,
           budget_id: selectedBudget.id,
+          account_id: accountId,
         });
       }
+      await rememberAccount(selectedBudget.id, accountId);
+      refreshAccounts();
       router.back();
     } catch (e: any) {
       Alert.alert(
@@ -340,6 +366,7 @@ export default function AddTransaction() {
     date,
     selectedBudget,
     effectiveAvailable,
+    accountId,
   ]);
 
   return (
@@ -427,6 +454,22 @@ export default function AddTransaction() {
                   {selectedBudget.name}
                 </Text>
               </Text>
+            </View>
+          )}
+
+          {/* ── Compte ── */}
+          {activeAccounts.length > 0 && selectedBudget && (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: c.textMuted }]}>
+                {type === "income" ? "Reçu sur le compte" : "Payé avec le compte"}
+              </Text>
+              <AccountChooser
+                accounts={accounts}
+                balances={accountBalances}
+                value={accountId}
+                onChange={setAccountChoice}
+                currency={selectedBudget.currency}
+              />
             </View>
           )}
 

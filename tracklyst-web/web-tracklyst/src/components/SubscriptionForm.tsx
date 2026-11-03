@@ -3,6 +3,7 @@
 import { mdiCheck, mdiDeleteOutline, mdiPauseCircleOutline, mdiPlayCircleOutline } from "@mdi/js";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { AccountChooser } from "@/components/AccountChooser";
 import { AddDefaultCategories } from "@/components/AddDefaultCategories";
 import { Button, CategoryIcon, Field, Icon, Segmented, cx, inputClass } from "@/components/ui";
 import { createSubscription, deleteSubscription, errorMessage, updateSubscription } from "@/lib/data";
@@ -15,7 +16,7 @@ type Frequency = "weekly" | "monthly" | "yearly";
 /** Création ou modification d'un abonnement (prélèvement récurrent). */
 export function SubscriptionForm({ existing }: { existing?: Subscription }) {
   const router = useRouter();
-  const { categories, refresh } = useApp();
+  const { categories, refresh, accounts, accountBalances, hidden } = useApp();
   const budget = useActiveBudget();
   const currency = budget?.currency ?? "MGA";
 
@@ -26,6 +27,7 @@ export function SubscriptionForm({ existing }: { existing?: Subscription }) {
   );
   const [nextDate, setNextDate] = useState(existing?.next_occurrence ?? todayISO());
   const [categoryId, setCategoryId] = useState<string | null>(existing?.category_id ?? null);
+  const [accountChoice, setAccountChoice] = useState<string | null>(existing?.account_id ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,6 +35,7 @@ export function SubscriptionForm({ existing }: { existing?: Subscription }) {
   // Catégorie « Abonnements » choisie par défaut quand elle existe.
   const selectedId = categoryId ?? list.find((c) => c.name.toLowerCase() === "abonnements")?.id ?? null;
   const amount = parseAmount(amountRaw);
+  const accountId = accountChoice ?? accounts.find((a) => !a.is_archived)?.id ?? null;
   const canSave = !!budget && description.trim().length > 0 && amount > 0 && !!selectedId && !!nextDate && !saving;
 
   const run = async (fn: () => Promise<void>, fallback: string) => {
@@ -51,7 +54,7 @@ export function SubscriptionForm({ existing }: { existing?: Subscription }) {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSave || !budget || !selectedId) return;
-    const input = { category_id: selectedId, amount, description: description.trim(), frequency };
+    const input = { category_id: selectedId, account_id: accountId, amount, description: description.trim(), frequency };
     run(
       () =>
         existing
@@ -110,6 +113,20 @@ export function SubscriptionForm({ existing }: { existing?: Subscription }) {
       <Field label="Prochain prélèvement" hint="Vous serez rappelé ce jour-là pour le valider ou l'ignorer.">
         <input type="date" value={nextDate} onChange={(e) => setNextDate(e.target.value)} className={inputClass} />
       </Field>
+
+      {accounts.some((a) => !a.is_archived) && (
+        <section className="flex flex-col gap-2.5">
+          <h2 className="text-[13px] font-semibold text-muted">Prélevé sur le compte</h2>
+          <AccountChooser
+            accounts={accounts}
+            balances={accountBalances}
+            value={accountId}
+            onChange={setAccountChoice}
+            currency={currency}
+            hidden={hidden}
+          />
+        </section>
+      )}
 
       <section className="flex flex-col gap-2.5">
         <h2 className="text-[13px] font-semibold text-muted">Catégorie</h2>

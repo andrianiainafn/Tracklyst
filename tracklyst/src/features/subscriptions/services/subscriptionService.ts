@@ -121,6 +121,7 @@ export const subscriptionService = {
           date: sub.next_occurrence,
           is_recurring: true,
           recurring_rule_id: sub.id,
+          account_id: sub.account_id ?? null,
         }),
       )
       .select(

@@ -1,14 +1,14 @@
 "use client";
 
 import { mdiCheck, mdiDeleteOutline, mdiLockOutline, mdiWalletOutline } from "@mdi/js";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
-import { AccountBadge, AccountPicker } from "@/components/AccountPicker";
+import { AccountIcon, accountName } from "@/components/AccountChooser";
 import { PageHeader } from "@/components/PageHeader";
-import { Button, Field, Icon, Sheet, cx, inputClass } from "@/components/ui";
+import { Button, Field, Icon, Sheet, inputClass } from "@/components/ui";
 import { deleteBudget, errorMessage, getBudgetMembers, updateBudget } from "@/lib/data";
-import { currencySymbol, money, parseAmount } from "@/lib/format";
-import type { AccountKind } from "@/lib/accounts";
+import { money } from "@/lib/format";
 import { BUDGET_THEMES, resolveBudgetTheme } from "@/lib/themes";
 import type { Budget } from "@/lib/types";
 import { useApp } from "@/stores/app";
@@ -33,19 +33,10 @@ export default function EditBudgetPage({ params }: { params: Promise<{ id: strin
 function BudgetEditForm({ budget }: { budget: Budget }) {
   const router = useRouter();
   const refresh = useApp((s) => s.refresh);
-  const budgets = useApp((s) => s.budgets);
   const shared = budget.owner_type === "group";
 
   const [name, setName] = useState(budget.name);
-  const [initialRaw, setInitialRaw] = useState(
-    Number(budget.initial_amount ?? 0) > 0 ? String(Number(budget.initial_amount)) : "",
-  );
   const [theme, setTheme] = useState(resolveBudgetTheme(budget));
-  const [accountKind, setAccountKind] = useState<AccountKind | null>((budget.account_kind as AccountKind | null) ?? null);
-  const [accountName, setAccountName] = useState(budget.account_name ?? "");
-  const usedNames = budgets
-    .filter((b) => b.id !== budget.id && b.account_kind === accountKind && b.account_name)
-    .map((b) => b.account_name as string);
   // Rôle sur un budget partagé (personnel = propriétaire).
   const [role, setRole] = useState<string | null>(shared ? null : "owner");
   const [saving, setSaving] = useState(false);
@@ -66,7 +57,10 @@ function BudgetEditForm({ budget }: { budget: Budget }) {
 
   const canEdit = role === "owner" || role === "admin";
   const canDelete = role === "owner";
-  const initial = parseAmount(initialRaw);
+  const { accounts, accountBalances, activeBudgetId } = useApp();
+  // Comptes chargés seulement pour le budget affiché.
+  const budgetAccounts = activeBudgetId === budget.id ? accounts.filter((a) => !a.is_archived) : [];
+  const total = budgetAccounts.reduce((sum, a) => sum + (accountBalances[a.id] ?? 0), 0);
   const canSave = canEdit && name.trim().length > 0 && !saving;
 
   const save = async (e: React.FormEvent) => {
@@ -78,9 +72,6 @@ function BudgetEditForm({ budget }: { budget: Budget }) {
       await updateBudget(budget.id, {
         name: name.trim(),
         theme: theme.id,
-        initial_amount: initial,
-        account_kind: accountKind,
-        account_name: accountKind ? accountName.trim() || null : null,
       });
       await refresh();
       router.back();
@@ -114,11 +105,9 @@ function BudgetEditForm({ budget }: { budget: Budget }) {
           <Icon path={mdiWalletOutline} size={18} />
           <span className="truncate">{name.trim() || "Nom du budget"}</span>
         </div>
-        <p className="mt-2 truncate text-[30px] font-extrabold tracking-tight">{money(initial, budget.currency)}</p>
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-white/70">Solde de départ · {budget.currency}</p>
-          <AccountBadge budget={{ account_kind: accountKind, account_name: accountName }} className="bg-white/90! text-[#0f172a]!" />
-        </div>
+        <p className="mt-2 text-xs text-white/70">
+          {budgetAccounts.length} compte{budgetAccounts.length > 1 ? "s" : ""} · {budget.currency}
+        </p>
       </div>
 
       {role && !canEdit && (
@@ -131,33 +120,6 @@ function BudgetEditForm({ budget }: { budget: Budget }) {
       <fieldset disabled={!canEdit} className="flex min-w-0 flex-col gap-5 disabled:opacity-60">
         <Field label="Nom">
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} className={inputClass} />
-        </Field>
-
-        <Field label="Où est cet argent ?">
-          <AccountPicker
-            kind={accountKind}
-            name={accountName}
-            usedNames={usedNames}
-            onChange={(k, n) => {
-              setAccountKind(k);
-              setAccountName(n);
-            }}
-          />
-        </Field>
-
-        <Field label="Solde de départ" hint="L'argent qui était déjà dans ce budget avant votre première transaction.">
-          <div className="relative">
-            <input
-              inputMode="decimal"
-              value={initialRaw}
-              onChange={(e) => setInitialRaw(e.target.value.replace(/[^0-9.,\s]/g, ""))}
-              placeholder="0"
-              className={cx(inputClass, "pr-14")}
-            />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-muted">
-              {currencySymbol(budget.currency)}
-            </span>
-          </div>
         </Field>
 
         <Field label="Couleur">
@@ -184,6 +146,25 @@ function BudgetEditForm({ budget }: { budget: Budget }) {
           Devise : {budget.currency}. Elle ne peut pas être changée : les montants enregistrés ne seraient pas convertis.
         </p>
       </fieldset>
+
+      {activeBudgetId === budget.id && (
+        <Link href="/accounts" className="flex flex-col gap-2.5 rounded-[18px] border border-line bg-surface p-4 active:opacity-80">
+          <span className="flex items-center justify-between">
+            <span className="text-[15px] font-bold">Comptes du budget</span>
+            <span className="text-[13px] font-bold text-tint">Gérer</span>
+          </span>
+          {budgetAccounts.map((a) => (
+            <span key={a.id} className="flex items-center gap-3">
+              <AccountIcon account={a} size={30} />
+              <span className="min-w-0 flex-1 truncate text-[14px] font-semibold">{accountName(a)}</span>
+              <span className="text-[13px] font-bold">{money(accountBalances[a.id] ?? 0, budget.currency)}</span>
+            </span>
+          ))}
+          <span className="flex items-center justify-between border-t border-line pt-2.5 text-[13px] text-muted">
+            Total des comptes <b className="text-ink">{money(total, budget.currency)}</b>
+          </span>
+        </Link>
+      )}
 
       {error && <p className="rounded-[12px] bg-danger-muted px-3 py-2 text-[13px] text-danger">{error}</p>}
 

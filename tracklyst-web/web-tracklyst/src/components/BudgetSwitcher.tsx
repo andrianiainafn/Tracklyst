@@ -6,8 +6,6 @@ import { useEffect, useState } from "react";
 import { Icon, Sheet, cx } from "@/components/ui";
 import { getAvailableBalance } from "@/lib/data";
 import { currencySymbol, money } from "@/lib/format";
-import { accountLabel } from "@/lib/accounts";
-import { providerFor } from "@/lib/providers";
 import { resolveBudgetTheme } from "@/lib/themes";
 import { useApp } from "@/stores/app";
 
@@ -44,21 +42,15 @@ export function BudgetSwitcher({ open, onClose }: { open: boolean; onClose: () =
               }}
               className="flex min-w-0 flex-1 items-center gap-3 p-3 text-left active:opacity-75"
             >
-              {providerFor(b.account_name) ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={providerFor(b.account_name)!.logo} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-[14px]" />
-              ) : (
-                <span
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-white"
-                  style={{ background: resolveBudgetTheme(b).to }}
-                >
-                  <Icon path={b.owner_type === "group" ? mdiAccountMultiple : mdiWalletOutline} size={20} />
-                </span>
-              )}
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-white"
+                style={{ background: resolveBudgetTheme(b).to }}
+              >
+                <Icon path={b.owner_type === "group" ? mdiAccountMultiple : mdiWalletOutline} size={20} />
+              </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[15px] font-bold">{b.name}</span>
                 <span className="block truncate text-[13px] text-muted">
-                  {accountLabel(b) ? `${accountLabel(b)} · ` : ""}
                   {bal === undefined || Number.isNaN(bal)
                     ? b.currency
                     : hidden

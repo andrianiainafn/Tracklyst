@@ -9,6 +9,7 @@ export interface Transaction {
   date: string; // ISO date string "YYYY-MM-DD"
   is_recurring: boolean;
   recurring_rule_id: string | null;
+  account_id?: string | null;
   created_by: string | null;
   created_at: string;
 
@@ -31,6 +32,7 @@ export interface CreateTransactionDTO {
   date: string;
   is_recurring?: boolean;
   recurring_rule_id?: string;
+  account_id?: string | null;
 }
 
 export type UpdateTransactionDTO = Partial<CreateTransactionDTO>;

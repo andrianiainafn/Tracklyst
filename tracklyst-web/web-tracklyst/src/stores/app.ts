@@ -4,6 +4,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
   errorMessage,
+  getAccountBalances,
+  getAccounts,
   getAvailableBalance,
   getBudgets,
   getCategories,
@@ -13,7 +15,7 @@ import {
   getTransactions,
 } from "@/lib/data";
 import { monthRange } from "@/lib/format";
-import type { Budget, Category, Goal, Subscription, Transaction } from "@/lib/types";
+import type { Account, Budget, Category, Goal, Subscription, Transaction } from "@/lib/types";
 
 interface AppState {
   /** Budget choisi (persisté sur l'appareil). */
@@ -28,6 +30,9 @@ interface AppState {
   goals: Goal[];
   subscriptions: Subscription[];
   savedThisMonth: number;
+  /** Comptes du budget actif (archivés compris) et solde de chacun ; « none » = sans compte. */
+  accounts: Account[];
+  accountBalances: Record<string, number>;
 
   loading: boolean;
   loaded: boolean;
@@ -48,6 +53,8 @@ const EMPTY = {
   goals: [],
   subscriptions: [],
   savedThisMonth: 0,
+  accounts: [],
+  accountBalances: {},
   loaded: false,
   error: null,
 };
@@ -78,7 +85,7 @@ export const useApp = create<AppState>()(
             return;
           }
           const { start, end } = monthRange();
-          const [balance, categories, transactions, goals, subscriptions, savedThisMonth] =
+          const [balance, categories, transactions, goals, subscriptions, savedThisMonth, accounts, accountBalances] =
             await Promise.all([
               getAvailableBalance(active.id),
               getCategories(active.id),
@@ -86,6 +93,8 @@ export const useApp = create<AppState>()(
               getGoals(active.id),
               getSubscriptions(active.id),
               getMonthSaved(active.id, start, end),
+              getAccounts(active.id),
+              getAccountBalances(active.id),
             ]);
           set({
             activeBudgetId: active.id,
@@ -96,6 +105,8 @@ export const useApp = create<AppState>()(
             goals,
             subscriptions,
             savedThisMonth,
+            accounts,
+            accountBalances,
             loaded: true,
             loading: false,
             error: null,

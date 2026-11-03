@@ -1,3 +1,5 @@
+import { AccountChooser } from "@/src/features/accounts/components/AccountChooser";
+import { useAccountStore } from "@/src/features/accounts/store/accountStore";
 import { Colors, Radius } from "@/constants/theme";
 import { Button } from "@/src/components/ui/Button";
 import { IconSymbol } from "@/src/components/ui/icon-symbol";
@@ -86,6 +88,13 @@ export default function AddSubscriptionScreen() {
   );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [accountChoice, setAccountChoice] = useState<string | null>(existing?.account_id ?? null);
+  const accounts = useAccountStore((st) => (st.budgetId === activeBudget?.id ? st.accounts : []));
+  const accountBalances = useAccountStore((st) => st.balances);
+  useEffect(() => {
+    if (activeBudget) useAccountStore.getState().load(activeBudget.id).catch(() => {});
+  }, [activeBudget?.id]);
+  const accountId = accountChoice ?? accounts.find((a) => !a.is_archived)?.id ?? null;
 
   const expenseCats = useMemo(
     () => categories.filter((cat) => cat.type === "expense"),
@@ -129,6 +138,7 @@ export default function AddSubscriptionScreen() {
             description: name.trim(),
             amount,
             category_id: categoryId,
+            account_id: accountId,
             frequency,
             // La date choisie devient la nouvelle ancre du calendrier.
             ...(nextDate !== existing.next_occurrence && {
@@ -139,6 +149,7 @@ export default function AddSubscriptionScreen() {
         : await subscriptionService.createSubscription({
             budget_id: activeBudget.id,
             category_id: categoryId,
+            account_id: accountId,
             amount,
             description: name.trim(),
             frequency,
@@ -291,6 +302,20 @@ export default function AddSubscriptionScreen() {
             automatiquement.
           </Text>
         </View>
+
+        {/* Compte prélevé */}
+        {accounts.some((a) => !a.is_archived) && activeBudget && (
+          <View style={styles.section}>
+            <Text style={[styles.label, { color: c.textMuted }]}>Prélevé sur le compte</Text>
+            <AccountChooser
+              accounts={accounts}
+              balances={accountBalances}
+              value={accountId}
+              onChange={setAccountChoice}
+              currency={activeBudget.currency}
+            />
+          </View>
+        )}
 
         {/* Catégorie */}
         <View style={styles.section}>

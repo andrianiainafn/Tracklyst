@@ -2,7 +2,7 @@ import { fieldCrypto, keyManager } from "./e2ee";
 import { supabase } from "./supabase";
 import { nextOccurrenceAfter } from "./schedule";
 import { todayISO } from "./format";
-import type { Budget, Category, Goal, Subscription, Transaction, TxType } from "./types";
+import type { Account, Budget, Category, Goal, Subscription, Transaction, Transfer, TxType } from "./types";
 
 // Accès aux données : mêmes tables, mêmes règles que l'app mobile.
 
@@ -71,6 +71,7 @@ export type TransactionInput = {
   type: TxType;
   description: string | null;
   date: string;
+  account_id: string | null;
 };
 
 export async function saveTransaction(input: TransactionInput, id?: string) {
@@ -192,6 +193,7 @@ export async function confirmSubscription(sub: Subscription) {
       date: sub.next_occurrence,
       is_recurring: true,
       recurring_rule_id: sub.id,
+      account_id: sub.account_id ?? null,
     }),
   );
   if (error) {
@@ -256,17 +258,22 @@ export async function createBudget(input: {
         owner_type: "user",
         owner_id: auth.user.id,
         currency: input.currency,
-        initial_amount: input.initial_amount,
+        initial_amount: 0,
         theme: input.theme,
-        account_kind: input.account_kind,
-        account_name: seal(input.account_name),
       })
       .select("id, name, owner_type, owner_id, currency, initial_amount, theme, account_kind, account_name")
       .single(),
   ) as Budget;
   if (key) await keyManager.registerBudgetKey(id, key);
+  // Le solde de départ appartient au premier compte (MVola, BNI…).
+  await createAccount({
+    budget_id: id,
+    kind: input.account_kind ?? "other",
+    name: input.account_name?.trim() || "Compte principal",
+    initial_amount: input.initial_amount,
+  });
   if (input.withDefaultCategories) await addDefaultCategories(budget.id, []);
-  return { ...budget, name: input.name, account_name: input.account_name };
+  return { ...budget, name: input.name };
 }
 
 export async function createGoal(input: {
@@ -285,6 +292,7 @@ export async function createGoal(input: {
 
 export async function createSubscription(input: {
   budget_id: string;
+  account_id: string | null;
   category_id: string;
   amount: number;
   description: string;
@@ -363,6 +371,7 @@ export async function updateCategoryLimit(categoryId: string, limit: number | nu
 }
 
 export type SubscriptionInput = {
+  account_id: string | null;
   category_id: string;
   amount: number;
   description: string;
@@ -392,10 +401,7 @@ export async function deleteGoal(id: string) {
   check(await supabase.from("goals").delete().eq("id", id));
 }
 
-export async function updateBudget(
-  id: string,
-  input: { name: string; theme: string; initial_amount: number; account_kind: string | null; account_name: string | null },
-) {
+export async function updateBudget(id: string, input: { name: string; theme: string }) {
   check(await supabase.from("budgets").update(await fieldCrypto.encrypt("budgets", id, input)).eq("id", id));
 }
 
@@ -406,4 +412,96 @@ export async function updateBudget(
 export async function deleteBudget(budget: Pick<Budget, "id" | "owner_type" | "owner_id">) {
   check(await supabase.from("budgets").delete().eq("id", budget.id));
   if (budget.owner_type === "group") check(await supabase.from("groups").delete().eq("id", budget.owner_id));
+}
+
+// ─── Comptes d'un budget (migration 00011) ───────────────────────────────────
+
+const ACCOUNT_COLUMNS = "id, budget_id, kind, name, initial_amount, position, is_archived";
+
+export async function getAccounts(budgetId: string): Promise<Account[]> {
+  const rows = check(
+    await supabase
+      .from("budget_accounts")
+      .select(ACCOUNT_COLUMNS)
+      .eq("budget_id", budgetId)
+      .order("position")
+      .order("created_at"),
+  ) as Account[];
+  return fieldCrypto.decrypt(
+    "budget_accounts",
+    budgetId,
+    rows.map((a) => ({ ...a, initial_amount: Number(a.initial_amount) })),
+  );
+}
+
+/** Solde de chaque compte ; la clé « none » regroupe les mouvements sans compte. */
+export async function getAccountBalances(budgetId: string): Promise<Record<string, number>> {
+  const rows = check(
+    await supabase.rpc("get_account_balances", { p_budget_id: budgetId, p_date: todayISO() }),
+  ) as { account_id: string | null; balance: number }[];
+  return Object.fromEntries((rows ?? []).map((r) => [r.account_id ?? "none", Number(r.balance)]));
+}
+
+export async function createAccount(input: { budget_id: string; kind: string; name: string | null; initial_amount: number }) {
+  const sealed = await fieldCrypto.encrypt("budget_accounts", input.budget_id, input);
+  return check(await supabase.from("budget_accounts").insert(sealed).select("id").single()) as { id: string };
+}
+
+export async function updateAccount(
+  account: Pick<Account, "id" | "budget_id">,
+  input: Partial<{ kind: string; name: string | null; initial_amount: number; is_archived: boolean }>,
+) {
+  const sealed = await fieldCrypto.encrypt("budget_accounts", account.budget_id, input);
+  check(await supabase.from("budget_accounts").update(sealed).eq("id", account.id));
+}
+
+/** Supprime un compte : ses transactions restent, sans compte (« Non attribué »). */
+export async function deleteAccount(id: string) {
+  check(await supabase.from("budget_accounts").delete().eq("id", id));
+}
+
+export async function getTransfers(budgetId: string): Promise<Transfer[]> {
+  const rows = check(
+    await supabase
+      .from("account_transfers")
+      .select("*")
+      .eq("budget_id", budgetId)
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ) as Transfer[];
+  return fieldCrypto.decrypt("account_transfers", budgetId, rows);
+}
+
+/**
+ * Transfert entre deux comptes. Les frais éventuels (retrait MVola…) sont
+ * une dépense sur le compte de départ.
+ */
+export async function createTransfer(input: {
+  budget_id: string;
+  from_account_id: string;
+  to_account_id: string;
+  amount: number;
+  fee: number;
+  fee_category_id: string | null;
+  description: string | null;
+  date: string;
+}) {
+  const { fee, fee_category_id, ...transfer } = input;
+  check(await supabase.from("account_transfers").insert(await fieldCrypto.encrypt("account_transfers", input.budget_id, transfer)));
+  if (fee > 0 && fee_category_id) {
+    await saveTransaction({
+      budget_id: input.budget_id,
+      account_id: input.from_account_id,
+      category_id: fee_category_id,
+      amount: fee,
+      type: "expense",
+      description: "Frais de transfert",
+      date: input.date,
+    });
+  }
+}
+
+export async function deleteTransfer(id: string) {
+  check(await supabase.from("account_transfers").delete().eq("id", id));
 }

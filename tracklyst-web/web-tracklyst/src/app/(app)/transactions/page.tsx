@@ -7,12 +7,14 @@ import { Card, CategoryIcon, ErrorBanner, Icon, Meter, Segmented, cx } from "@/c
 import { capitalize, dayLabel, money, monthKey, shortDate } from "@/lib/format";
 import { monthTotals } from "@/lib/stats";
 import type { Transaction } from "@/lib/types";
+import { AccountIcon, accountName } from "@/components/AccountChooser";
 import { useActiveBudget, useApp } from "@/stores/app";
 
 type Filter = "all" | "income" | "expense";
 
 export default function TransactionsPage() {
-  const { transactions, loaded, error } = useApp();
+  const { transactions, loaded, error, accounts } = useApp();
+  const accountById = new Map(accounts.map((a) => [a.id, a]));
   const budget = useActiveBudget();
   const currency = budget?.currency ?? "MGA";
   const [month, setMonth] = useState(() => {
@@ -151,6 +153,13 @@ export default function TransactionsPage() {
                     <span className="flex items-center gap-1 text-xs text-subtle">
                       <span className="truncate">{t.description && t.category?.name ? t.category.name : shortDate(t.date)}</span>
                       {t.is_recurring && <Icon path={mdiAutorenew} size={12} />}
+                      {t.account_id && accountById.get(t.account_id) && (
+                        <span className="flex min-w-0 shrink items-center gap-1">
+                          <span>·</span>
+                          <AccountIcon account={accountById.get(t.account_id)!} size={14} />
+                          <span className="truncate">{accountName(accountById.get(t.account_id)!)}</span>
+                        </span>
+                      )}
                     </span>
                   </span>
                   <span className={cx("text-sm font-bold", t.type === "income" ? "text-tint" : "text-ink")}>

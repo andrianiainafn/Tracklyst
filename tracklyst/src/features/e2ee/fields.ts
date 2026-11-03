@@ -15,6 +15,8 @@ export const ENCRYPTED_FIELDS = {
   goals: ["name", "description"],
   goal_transactions: ["description"],
   recurring_rules: ["description"],
+  budget_accounts: ["name"],
+  account_transfers: ["description"],
 } as const;
 
 export type EncryptedTable = keyof typeof ENCRYPTED_FIELDS;

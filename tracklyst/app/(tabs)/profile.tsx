@@ -199,6 +199,14 @@ export default function ProfileScreen() {
             c={c}
           />
           <MenuRow
+            icon="bank-outline"
+            tint="#3B82F6"
+            label="Comptes"
+            detail="MVola, banque, espèces · transferts"
+            onPress={() => router.push("/(modal)/accounts" as any)}
+            c={c}
+          />
+          <MenuRow
             icon="speedometer"
             tint="#0EA5E9"
             label="Plafonds du mois"

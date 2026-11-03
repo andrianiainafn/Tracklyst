@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { mdiCheck } from "@mdi/js";
+import { AccountChooser, lastAccountId, rememberAccount } from "@/components/AccountChooser";
 import { AddDefaultCategories } from "@/components/AddDefaultCategories";
 import { Button, CategoryIcon, Icon, Segmented, cx } from "@/components/ui";
 import { deleteTransaction, errorMessage, saveTransaction } from "@/lib/data";
@@ -20,7 +21,7 @@ export function TransactionForm({
   initialCategoryId?: string;
 }) {
   const router = useRouter();
-  const { categories, refresh } = useApp();
+  const { categories, refresh, accounts, accountBalances, hidden } = useApp();
   const budget = useActiveBudget();
   const currency = budget?.currency ?? "MGA";
 
@@ -29,10 +30,18 @@ export function TransactionForm({
   const [categoryId, setCategoryId] = useState<string | null>(existing?.category_id ?? initialCategoryId ?? null);
   const [description, setDescription] = useState(existing?.description ?? "");
   const [date, setDate] = useState(existing?.date ?? todayISO());
+  const [accountChoice, setAccountChoice] = useState<string | null>(existing?.account_id ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const list = useMemo(() => categories.filter((c) => c.type === type), [categories, type]);
+  const activeAccounts = accounts.filter((a) => !a.is_archived);
+  // Compte proposé : celui de la transaction, sinon le dernier utilisé, sinon le premier.
+  const accountId =
+    accountChoice ??
+    (budget && activeAccounts.some((a) => a.id === lastAccountId(budget.id)) ? lastAccountId(budget.id) : null) ??
+    activeAccounts[0]?.id ??
+    null;
   const amount = parseAmount(amountRaw);
   const validCategory = list.some((c) => c.id === categoryId);
   const canSave = !!budget && amount > 0 && validCategory && !!date && !saving;
@@ -44,9 +53,18 @@ export function TransactionForm({
     setError(null);
     try {
       await saveTransaction(
-        { budget_id: budget.id, category_id: categoryId, amount, type, description: description.trim() || null, date },
+        {
+          budget_id: budget.id,
+          account_id: accountId,
+          category_id: categoryId,
+          amount,
+          type,
+          description: description.trim() || null,
+          date,
+        },
         existing?.id,
       );
+      rememberAccount(budget.id, accountId);
       await refresh();
       router.back();
     } catch (err) {
@@ -98,6 +116,23 @@ export function TransactionForm({
           <span className="text-xl font-bold text-muted">{currencySymbol(currency)}</span>
         </span>
       </label>
+
+      {/* Compte */}
+      {activeAccounts.length > 0 && (
+        <section className="flex flex-col gap-2.5">
+          <h2 className="text-[13px] font-semibold text-muted">
+            {type === "income" ? "Reçu sur le compte" : "Payé avec le compte"}
+          </h2>
+          <AccountChooser
+            accounts={accounts}
+            balances={accountBalances}
+            value={accountId}
+            onChange={setAccountChoice}
+            currency={currency}
+            hidden={hidden}
+          />
+        </section>
+      )}
 
       {/* Catégorie */}
       <section className="flex flex-col gap-2.5">

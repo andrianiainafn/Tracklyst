@@ -1,6 +1,6 @@
 "use client";
 
-import { mdiAccountMultiplePlusOutline, mdiAutorenew, mdiChevronRight, mdiFlagOutline, mdiKeyVariant, mdiLogout, mdiSpeedometer, mdiWalletOutline } from "@mdi/js";
+import { mdiAccountMultiplePlusOutline, mdiAutorenew, mdiBankOutline, mdiChevronRight, mdiFlagOutline, mdiKeyVariant, mdiLogout, mdiSpeedometer, mdiWalletOutline } from "@mdi/js";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card, Icon } from "@/components/ui";
@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useActiveBudget, useApp } from "@/stores/app";
 
 export default function ProfilePage() {
-  const { budgets, goals, subscriptions } = useApp();
+  const { budgets, goals, subscriptions, accounts } = useApp();
   const budget = useActiveBudget();
   const [user, setUser] = useState<{ email?: string; name?: string } | null>(null);
 
@@ -65,6 +65,13 @@ export default function ProfilePage() {
             ...(budget
               ? [{ href: `/budgets/${budget.id}/edit`, icon: mdiWalletOutline, tint: "#6366F1", label: "Modifier le budget", detail: `${budget.name} · nom, couleur, suppression` }]
               : []),
+            {
+              href: "/accounts",
+              icon: mdiBankOutline,
+              tint: "#3B82F6",
+              label: "Comptes",
+              detail: `${accounts.filter((a) => !a.is_archived).length} compte${accounts.filter((a) => !a.is_archived).length > 1 ? "s" : ""} · MVola, banque, espèces…`,
+            },
             { href: "/limits", icon: mdiSpeedometer, tint: "#0EA5E9", label: "Plafonds du mois", detail: budget?.name ?? "" },
             {
               href: "/subscriptions",

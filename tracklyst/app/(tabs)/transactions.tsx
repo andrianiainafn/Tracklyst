@@ -305,6 +305,7 @@ export default function TransactionsScreen() {
                 description: item.description ?? "",
                 date: item.date,
                 budget_id: item.budget_id,
+                account_id: item.account_id ?? "",
               },
             } as any),
         },
