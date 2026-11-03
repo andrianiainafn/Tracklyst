@@ -28,13 +28,14 @@ export const ACCOUNT_KINDS: {
     suggestions: [
       "BNI Madagascar",
       "BOA Madagascar",
+      "BRED Madagasikara",
+      "MCB Madagascar",
       "BFV-SG",
       "BMOI",
       "Accès Banque",
       "BGFI Bank",
       "SBM Madagascar",
       "Baobab Banque",
-      "MCB Madagascar",
     ],
   },
   {

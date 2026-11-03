@@ -4,6 +4,7 @@ import { formatCurrency, getCurrencySymbol } from "@/src/utils/currency";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import {
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -14,6 +15,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { accountLabel } from "../constants/accountLabels";
+import { providerFor } from "../constants/providers";
 import { resolveBudgetTheme } from "../constants/budgetThemes";
 import type { Budget } from "../types/budget.types";
 
@@ -77,9 +79,13 @@ export function BudgetSwitcherSheet({
                   pressed && { opacity: 0.75 },
                 ]}
               >
-                <View style={[styles.icon, { backgroundColor: theme.to }]}>
-                  <MaterialCommunityIcons name={b.owner_type === "group" ? "account-multiple" : "wallet-outline"} size={20} color="#fff" />
-                </View>
+                {providerFor(b.account_name) ? (
+                  <Image source={providerFor(b.account_name)!.logo} style={styles.icon} />
+                ) : (
+                  <View style={[styles.icon, { backgroundColor: theme.to }]}>
+                    <MaterialCommunityIcons name={b.owner_type === "group" ? "account-multiple" : "wallet-outline"} size={20} color="#fff" />
+                  </View>
+                )}
                 <View style={styles.rowBody}>
                   <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>
                     {b.name}

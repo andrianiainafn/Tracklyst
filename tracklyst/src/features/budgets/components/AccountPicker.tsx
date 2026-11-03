@@ -1,8 +1,9 @@
 import { Colors, Radius } from "@/constants/theme";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useColorScheme } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useColorScheme } from "react-native";
 import { ACCOUNT_KINDS, type AccountKind } from "../constants/accountLabels";
+import { providerFor } from "../constants/providers";
 
 /**
  * Choix de l'endroit où se trouve l'argent du budget : type (MVola, banque…)
@@ -22,6 +23,7 @@ export function AccountPicker({
   const isDark = useColorScheme() === "dark";
   const c = isDark ? Colors.dark : Colors.light;
   const current = ACCOUNT_KINDS.find((k) => k.id === kind) ?? null;
+  const typedProvider = providerFor(name);
 
   const suggestions = useMemo(() => {
     if (!current) return [];
@@ -39,7 +41,7 @@ export function AccountPicker({
           return (
             <Pressable
               key={k.id}
-              onPress={() => onChange(active ? null : k.id, active ? "" : name)}
+              onPress={() => onChange(active ? null : k.id, "")}
               style={({ pressed }) => [
                 styles.kind,
                 {
@@ -59,7 +61,11 @@ export function AccountPicker({
       {current && (
         <>
           <View style={[styles.inputWrap, { backgroundColor: c.surface, borderColor: c.border }]}>
-            <MaterialCommunityIcons name={current.icon} size={18} color={current.color} />
+            {typedProvider ? (
+              <Image source={typedProvider.logo} style={styles.inputLogo} />
+            ) : (
+              <MaterialCommunityIcons name={current.icon} size={18} color={current.color} />
+            )}
             <TextInput
               value={name}
               onChangeText={(t) => onChange(kind, t)}
@@ -73,15 +79,24 @@ export function AccountPicker({
           </View>
           {suggestions.length > 0 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-              {suggestions.map((s) => (
-                <Pressable
-                  key={s}
-                  onPress={() => onChange(kind, s)}
-                  style={({ pressed }) => [styles.chip, { backgroundColor: c.surfaceAlt }, pressed && { opacity: 0.6 }]}
-                >
-                  <Text style={[styles.chipText, { color: c.text }]}>{s}</Text>
-                </Pressable>
-              ))}
+              {suggestions.map((s) => {
+                const logo = providerFor(s)?.logo;
+                return (
+                  <Pressable
+                    key={s}
+                    onPress={() => onChange(kind, s)}
+                    style={({ pressed }) => [
+                      styles.chip,
+                      logo ? styles.chipWithLogo : null,
+                      { backgroundColor: c.surfaceAlt },
+                      pressed && { opacity: 0.6 },
+                    ]}
+                  >
+                    {logo ? <Image source={logo} style={styles.chipLogo} /> : null}
+                    <Text style={[styles.chipText, { color: c.text }]}>{s}</Text>
+                  </Pressable>
+                );
+              })}
             </ScrollView>
           )}
         </>
@@ -116,4 +131,7 @@ const styles = StyleSheet.create({
   chips: { gap: 8, paddingRight: 8 },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: Radius.pill },
   chipText: { fontSize: 13, fontWeight: "600" },
+  chipWithLogo: { flexDirection: "row", alignItems: "center", gap: 6, paddingLeft: 5 },
+  chipLogo: { width: 22, height: 22, borderRadius: 6 },
+  inputLogo: { width: 24, height: 24, borderRadius: 6 },
 });

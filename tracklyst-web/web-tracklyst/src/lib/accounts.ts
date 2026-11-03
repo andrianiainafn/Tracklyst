@@ -11,7 +11,7 @@ export const ACCOUNT_KINDS: { id: AccountKind; label: string; icon: string; colo
     label: "Banque",
     icon: mdiBankOutline,
     color: "#3B82F6",
-    suggestions: ["BNI Madagascar", "BOA Madagascar", "BFV-SG", "BMOI", "Accès Banque", "BGFI Bank", "SBM Madagascar", "Baobab Banque", "MCB Madagascar"],
+    suggestions: ["BNI Madagascar", "BOA Madagascar", "BRED Madagasikara", "MCB Madagascar", "BFV-SG", "BMOI", "Accès Banque", "BGFI Bank", "SBM Madagascar", "Baobab Banque"],
   },
   { id: "savings", label: "Épargne", icon: mdiPiggyBankOutline, color: "#10B981", suggestions: ["Caisse d'Épargne de Madagascar", "Livret d'épargne"] },
   { id: "cash", label: "Espèces", icon: mdiCash, color: "#64748B", suggestions: ["Portefeuille", "Coffre à la maison"] },
