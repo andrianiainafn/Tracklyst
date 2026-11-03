@@ -12,6 +12,7 @@ import {
   mdiTrendingDown,
   mdiTrendingUp,
 } from "@mdi/js";
+import { AccountBadge } from "@/components/AccountPicker";
 import { BudgetSwitcher } from "@/components/BudgetSwitcher";
 import { QuickActions } from "@/components/QuickActions";
 import { Card, CategoryIcon, ErrorBanner, Icon, Meter, SectionTitle, cx } from "@/components/ui";
@@ -77,7 +78,10 @@ export default function HomePage() {
             <Icon path={s.hidden ? mdiEyeOffOutline : mdiEyeOutline} size={18} />
           </button>
         </div>
-        <p className="text-[11px] font-bold tracking-[0.1em] text-subtle">SOLDE DISPONIBLE</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[11px] font-bold tracking-[0.1em] text-subtle">SOLDE DISPONIBLE</p>
+          {budget && <AccountBadge budget={budget} />}
+        </div>
         <button onClick={s.toggleHidden} className="mt-1 text-left">
           <span className="text-[34px] font-extrabold tracking-[-0.03em]">
             {s.hidden ? "•••••••" : amountOnly(s.balance)}

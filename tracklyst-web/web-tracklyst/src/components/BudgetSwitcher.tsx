@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Icon, Sheet, cx } from "@/components/ui";
 import { getAvailableBalance } from "@/lib/data";
 import { currencySymbol, money } from "@/lib/format";
+import { accountLabel } from "@/lib/accounts";
 import { resolveBudgetTheme } from "@/lib/themes";
 import { useApp } from "@/stores/app";
 
@@ -50,7 +51,8 @@ export function BudgetSwitcher({ open, onClose }: { open: boolean; onClose: () =
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[15px] font-bold">{b.name}</span>
-                <span className="block text-[13px] text-muted">
+                <span className="block truncate text-[13px] text-muted">
+                  {accountLabel(b) ? `${accountLabel(b)} · ` : ""}
                   {bal === undefined || Number.isNaN(bal)
                     ? b.currency
                     : hidden

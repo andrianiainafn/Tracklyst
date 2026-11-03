@@ -1,6 +1,8 @@
 import { Colors, Radius, Shadow } from "@/constants/theme";
 import { Button } from "@/src/components/ui/Button";
 import { Card } from "@/src/components/ui/Card";
+import { AccountPicker } from "@/src/features/budgets/components/AccountPicker";
+import type { AccountKind } from "@/src/features/budgets/constants/accountLabels";
 import { BUDGET_THEMES, resolveBudgetTheme } from "@/src/features/budgets/constants/budgetThemes";
 import { budgetService } from "@/src/features/budgets/services/budgetService";
 import { sharingService } from "@/src/features/budgets/services/sharingService";
@@ -152,7 +154,19 @@ export default function AddBudgetScreen() {
   const [selectedCurrency, setSelectedCurrency] = useState(
     CURRENCIES.find((cur) => cur.code === existing?.currency) ?? CURRENCIES[0],
   );
+  const [accountKindValue, setAccountKindValue] = useState<AccountKind | null>(
+    (existing?.account_kind as AccountKind | null | undefined) ?? null,
+  );
+  const [accountName, setAccountName] = useState(existing?.account_name ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Noms de comptes déjà utilisés (suggestions).
+  const usedAccountNames = budgets
+    .filter((b) => b.account_kind === accountKindValue && b.account_name)
+    .map((b) => b.account_name as string);
+  const account = {
+    account_kind: accountKindValue,
+    account_name: accountKindValue ? accountName.trim() || null : null,
+  };
   // Rôle sur un budget partagé : seul le propriétaire peut supprimer.
   const [role, setRole] = useState<string | null>(existing && existing.owner_type === "user" ? "owner" : null);
 
@@ -183,6 +197,7 @@ export default function AddBudgetScreen() {
         name: name.trim(),
         theme: selectedTheme.id,
         initial_amount: initialAmount,
+        ...account,
       });
       useBudgetStore.getState().updateBudget(existing.id, updated);
       router.back();
@@ -256,6 +271,7 @@ export default function AddBudgetScreen() {
         currency: selectedCurrency.code,
         initial_amount: initialAmount,
         theme: selectedTheme.id,
+        ...account,
       };
 
       const { data: inserted, error: insertError } = await supabase
@@ -345,6 +361,21 @@ export default function AddBudgetScreen() {
               <Text style={[styles.charCount, { color: c.textSubtle }]}>{name.length}/40</Text>
             )}
           </View>
+
+          {/* Où est l'argent */}
+          <SectionLabel label="OÙ EST CET ARGENT ?" color={c.textSubtle} />
+          <AccountPicker
+            kind={accountKindValue}
+            name={accountName}
+            usedNames={usedAccountNames}
+            onChange={(k, n) => {
+              setAccountKindValue(k);
+              setAccountName(n);
+            }}
+          />
+          <Text style={[styles.inputHint, { color: c.textSubtle, marginTop: 2 }]}>
+            MVola, compte bancaire, caisse d&apos;épargne… Une étiquette pour savoir où se trouve l&apos;argent.
+          </Text>
 
           {/* Montant initial */}
           <SectionLabel label="MONTANT INITIAL" color={c.textSubtle} />

@@ -26,7 +26,7 @@ export async function getBudgets(): Promise<Budget[]> {
   return check(
     await supabase
       .from("budgets")
-      .select("id, name, owner_type, owner_id, currency, initial_amount, theme")
+      .select("id, name, owner_type, owner_id, currency, initial_amount, theme, account_kind, account_name")
       .order("created_at", { ascending: true }),
   );
 }
@@ -219,6 +219,8 @@ export async function createBudget(input: {
   currency: string;
   initial_amount: number;
   theme: string;
+  account_kind: string | null;
+  account_name: string | null;
   withDefaultCategories: boolean;
 }): Promise<Budget> {
   const { data: auth, error: authError } = await supabase.auth.getUser();
@@ -233,8 +235,10 @@ export async function createBudget(input: {
         currency: input.currency,
         initial_amount: input.initial_amount,
         theme: input.theme,
+        account_kind: input.account_kind,
+        account_name: input.account_name,
       })
-      .select("id, name, owner_type, owner_id, currency, initial_amount, theme")
+      .select("id, name, owner_type, owner_id, currency, initial_amount, theme, account_kind, account_name")
       .single(),
   ) as Budget;
   if (input.withDefaultCategories) await addDefaultCategories(budget.id, []);
@@ -356,7 +360,10 @@ export async function deleteGoal(id: string) {
   check(await supabase.from("goals").delete().eq("id", id));
 }
 
-export async function updateBudget(id: string, input: { name: string; theme: string; initial_amount: number }) {
+export async function updateBudget(
+  id: string,
+  input: { name: string; theme: string; initial_amount: number; account_kind: string | null; account_name: string | null },
+) {
   check(await supabase.from("budgets").update(input).eq("id", id));
 }
 

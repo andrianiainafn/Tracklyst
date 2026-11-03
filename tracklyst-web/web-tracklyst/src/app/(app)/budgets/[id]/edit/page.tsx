@@ -3,10 +3,12 @@
 import { mdiCheck, mdiDeleteOutline, mdiLockOutline, mdiWalletOutline } from "@mdi/js";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
+import { AccountBadge, AccountPicker } from "@/components/AccountPicker";
 import { PageHeader } from "@/components/PageHeader";
 import { Button, Field, Icon, Sheet, cx, inputClass } from "@/components/ui";
 import { deleteBudget, errorMessage, getBudgetMembers, updateBudget } from "@/lib/data";
 import { currencySymbol, money, parseAmount } from "@/lib/format";
+import type { AccountKind } from "@/lib/accounts";
 import { BUDGET_THEMES, resolveBudgetTheme } from "@/lib/themes";
 import type { Budget } from "@/lib/types";
 import { useApp } from "@/stores/app";
@@ -31,6 +33,7 @@ export default function EditBudgetPage({ params }: { params: Promise<{ id: strin
 function BudgetEditForm({ budget }: { budget: Budget }) {
   const router = useRouter();
   const refresh = useApp((s) => s.refresh);
+  const budgets = useApp((s) => s.budgets);
   const shared = budget.owner_type === "group";
 
   const [name, setName] = useState(budget.name);
@@ -38,6 +41,11 @@ function BudgetEditForm({ budget }: { budget: Budget }) {
     Number(budget.initial_amount ?? 0) > 0 ? String(Number(budget.initial_amount)) : "",
   );
   const [theme, setTheme] = useState(resolveBudgetTheme(budget));
+  const [accountKind, setAccountKind] = useState<AccountKind | null>((budget.account_kind as AccountKind | null) ?? null);
+  const [accountName, setAccountName] = useState(budget.account_name ?? "");
+  const usedNames = budgets
+    .filter((b) => b.id !== budget.id && b.account_kind === accountKind && b.account_name)
+    .map((b) => b.account_name as string);
   // Rôle sur un budget partagé (personnel = propriétaire).
   const [role, setRole] = useState<string | null>(shared ? null : "owner");
   const [saving, setSaving] = useState(false);
@@ -67,7 +75,13 @@ function BudgetEditForm({ budget }: { budget: Budget }) {
     setSaving(true);
     setError(null);
     try {
-      await updateBudget(budget.id, { name: name.trim(), theme: theme.id, initial_amount: initial });
+      await updateBudget(budget.id, {
+        name: name.trim(),
+        theme: theme.id,
+        initial_amount: initial,
+        account_kind: accountKind,
+        account_name: accountKind ? accountName.trim() || null : null,
+      });
       await refresh();
       router.back();
     } catch (err) {
@@ -101,7 +115,10 @@ function BudgetEditForm({ budget }: { budget: Budget }) {
           <span className="truncate">{name.trim() || "Nom du budget"}</span>
         </div>
         <p className="mt-2 truncate text-[30px] font-extrabold tracking-tight">{money(initial, budget.currency)}</p>
-        <p className="text-xs text-white/70">Solde de départ · {budget.currency}</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-white/70">Solde de départ · {budget.currency}</p>
+          <AccountBadge budget={{ account_kind: accountKind, account_name: accountName }} className="bg-white/90! text-[#0f172a]!" />
+        </div>
       </div>
 
       {role && !canEdit && (
@@ -114,6 +131,18 @@ function BudgetEditForm({ budget }: { budget: Budget }) {
       <fieldset disabled={!canEdit} className="flex min-w-0 flex-col gap-5 disabled:opacity-60">
         <Field label="Nom">
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} className={inputClass} />
+        </Field>
+
+        <Field label="Où est cet argent ?">
+          <AccountPicker
+            kind={accountKind}
+            name={accountName}
+            usedNames={usedNames}
+            onChange={(k, n) => {
+              setAccountKind(k);
+              setAccountName(n);
+            }}
+          />
         </Field>
 
         <Field label="Solde de départ" hint="L'argent qui était déjà dans ce budget avant votre première transaction.">

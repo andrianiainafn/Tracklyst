@@ -10,6 +10,10 @@ export interface Budget {
   currency: string;
   initial_amount: number | null;
   theme: string | null;
+  /** Où se trouve l'argent : mobile_money, bank, savings, cash, other. */
+  account_kind?: string | null;
+  /** Nom libre : MVola, BNI Madagascar, Caisse d'Épargne… */
+  account_name?: string | null;
 }
 
 export interface CategoryRef {

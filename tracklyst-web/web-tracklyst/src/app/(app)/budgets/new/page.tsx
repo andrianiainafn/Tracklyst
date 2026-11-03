@@ -3,10 +3,12 @@
 import { mdiCheck, mdiWalletOutline } from "@mdi/js";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AccountBadge, AccountPicker } from "@/components/AccountPicker";
 import { PageHeader } from "@/components/PageHeader";
 import { Button, Field, Icon, cx, inputClass } from "@/components/ui";
 import { createBudget, errorMessage } from "@/lib/data";
 import { currencySymbol, money, parseAmount } from "@/lib/format";
+import type { AccountKind } from "@/lib/accounts";
 import { BUDGET_THEMES } from "@/lib/themes";
 import { useApp } from "@/stores/app";
 
@@ -19,12 +21,16 @@ const CURRENCIES = [
 export default function NewBudgetPage() {
   const router = useRouter();
   const selectBudget = useApp((s) => s.selectBudget);
+  const budgets = useApp((s) => s.budgets);
 
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("MGA");
   const [initialRaw, setInitialRaw] = useState("");
   const [theme, setTheme] = useState(BUDGET_THEMES[0]);
   const [withDefaults, setWithDefaults] = useState(true);
+  const [accountKind, setAccountKind] = useState<AccountKind | null>(null);
+  const [accountName, setAccountName] = useState("");
+  const usedNames = budgets.filter((b) => b.account_kind === accountKind && b.account_name).map((b) => b.account_name as string);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,6 +48,8 @@ export default function NewBudgetPage() {
         currency,
         initial_amount: initial,
         theme: theme.id,
+        account_kind: accountKind,
+        account_name: accountKind ? accountName.trim() || null : null,
         withDefaultCategories: withDefaults,
       });
       await selectBudget(budget.id);
@@ -66,7 +74,10 @@ export default function NewBudgetPage() {
             <span className="truncate">{name.trim() || "Mon nouveau budget"}</span>
           </div>
           <p className="mt-2 truncate text-[30px] font-extrabold tracking-tight">{money(initial, currency)}</p>
-          <p className="text-xs text-white/70">Solde de départ</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-white/70">Solde de départ</p>
+            <AccountBadge budget={{ account_kind: accountKind, account_name: accountName }} className="bg-white/90! text-[#0f172a]!" />
+          </div>
         </div>
 
         <Field label="Nom">
@@ -77,6 +88,18 @@ export default function NewBudgetPage() {
             placeholder="Ex : Foyer, Épargne, Projet terrain"
             maxLength={60}
             className={inputClass}
+          />
+        </Field>
+
+        <Field label="Où est cet argent ?" hint="MVola, compte bancaire, caisse d'épargne… Une étiquette pour savoir où se trouve l'argent.">
+          <AccountPicker
+            kind={accountKind}
+            name={accountName}
+            usedNames={usedNames}
+            onChange={(k, n) => {
+              setAccountKind(k);
+              setAccountName(n);
+            }}
           />
         </Field>
 

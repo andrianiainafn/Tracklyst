@@ -13,6 +13,7 @@ import {
   useColorScheme,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { accountLabel } from "../constants/accountLabels";
 import { resolveBudgetTheme } from "../constants/budgetThemes";
 import type { Budget } from "../types/budget.types";
 
@@ -83,7 +84,8 @@ export function BudgetSwitcherSheet({
                   <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>
                     {b.name}
                   </Text>
-                  <Text style={[styles.meta, { color: c.textMuted }]}>
+                  <Text style={[styles.meta, { color: c.textMuted }]} numberOfLines={1}>
+                    {accountLabel(b) ? `${accountLabel(b)} · ` : ""}
                     {balance === undefined
                       ? b.currency
                       : hidden

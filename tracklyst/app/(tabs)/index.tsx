@@ -4,6 +4,7 @@ import { Card } from "@/src/components/ui/Card";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { useActiveBudget } from "@/src/features/budgets/hooks/useActiveBudget";
 import { useBudgets } from "@/src/features/budgets/hooks/useBudgets";
+import { AccountBadge } from "@/src/features/budgets/components/AccountBadge";
 import { BudgetSwitcherSheet } from "@/src/features/budgets/components/BudgetSwitcherSheet";
 import { budgetService } from "@/src/features/budgets/services/budgetService";
 import { CashflowChart } from "@/src/features/dashboard/components/CashflowChart";
@@ -241,9 +242,12 @@ export default function HomeScreen() {
               <PrivacyToggle />
             </View>
 
-            <Text style={[styles.balanceLabel, { color: c.textSubtle }]}>
-              SOLDE DISPONIBLE
-            </Text>
+            <View style={styles.balanceLabelRow}>
+              <Text style={[styles.balanceLabel, { color: c.textSubtle }]}>
+                SOLDE DISPONIBLE
+              </Text>
+              <AccountBadge budget={activeBudget} />
+            </View>
             {isLoading && budgets.length === 0 ? (
               <ActivityIndicator color={c.tint} style={{ marginTop: 8, alignSelf: "flex-start" }} />
             ) : (
@@ -466,6 +470,7 @@ const styles = StyleSheet.create({
   budgetDot: { width: 10, height: 10, borderRadius: 5 },
   budgetPillText: { fontSize: 14, fontWeight: "700", flexShrink: 1 },
   balanceHint: { fontSize: 12, marginTop: 8 },
+  balanceLabelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   balanceLabel: {
     fontSize: 11,
     fontWeight: "700",
