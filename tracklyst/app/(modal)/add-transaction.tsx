@@ -1,4 +1,5 @@
 import { AccountChooser } from "@/src/features/accounts/components/AccountChooser";
+import { accountName } from "@/src/features/accounts/components/AccountIcon";
 import { lastAccountId, refreshAccounts, rememberAccount, useAccountStore } from "@/src/features/accounts/store/accountStore";
 import { Colors, Radius } from "@/constants/theme";
 import { Button } from "@/src/components/ui/Button";
@@ -267,13 +268,29 @@ export default function AddTransaction() {
   const exceedsBalance =
     type === "expense" && effectiveAvailable != null && amount > effectiveAvailable;
 
-  const canSubmit =
-    amount > 0 &&
-    !!categoryId &&
-    !!selectedBudget &&
-    !isLoading &&
-    !isBalanceLoading &&
-    !exceedsBalance;
+  // Solde du compte choisi (en modification, la dépense d'origine y est remise).
+  const accountAvailable =
+    accountId != null
+      ? (accountBalances[accountId] ?? 0) +
+        (isEditing && originalType === "expense" && params.account_id === accountId ? originalAmount : 0)
+      : null;
+  const exceedsAccount = type === "expense" && accountAvailable != null && amount > accountAvailable;
+  const selectedAccount = accounts.find((a) => a.id === accountId);
+
+  // Dépasser un solde n'est pas bloquant : avertissement puis confirmation.
+  const balanceWarning = exceedsAccount
+    ? `Le compte ${selectedAccount ? accountName(selectedAccount) : "choisi"} n'a que ${formatCurrency(
+        Math.round(accountAvailable ?? 0),
+        selectedBudget?.currency,
+      )} : son solde deviendra négatif.`
+    : exceedsBalance
+      ? `Cette dépense dépasse le solde disponible du budget (${formatCurrency(
+          Math.round(effectiveAvailable ?? 0),
+          selectedBudget?.currency,
+        )}) : elle entame l'argent mis de côté pour vos objectifs.`
+      : null;
+
+  const canSubmit = amount > 0 && !!categoryId && !!selectedBudget && !isLoading && !isBalanceLoading;
 
   const { addCategory } = useCategoryStore();
 
@@ -309,21 +326,8 @@ export default function AddTransaction() {
     loadBalance();
   }, [selectedBudget?.id]);
 
-  const handleSubmit = useCallback(async () => {
+  const save = useCallback(async () => {
     if (!canSubmit || !categoryId || !selectedBudget) return;
-
-    if (
-      type === "expense" &&
-      effectiveAvailable != null &&
-      amount > effectiveAvailable
-    ) {
-      Alert.alert(
-        "Solde insuffisant",
-        "Le montant de cette dépense dépasse le solde disponible du budget.",
-        [{ text: "OK" }],
-      );
-      return;
-    }
     try {
       if (isEditing && params.id) {
         await updateTransaction(params.id, {
@@ -365,9 +369,17 @@ export default function AddTransaction() {
     description,
     date,
     selectedBudget,
-    effectiveAvailable,
     accountId,
   ]);
+
+  const handleSubmit = () => {
+    if (!canSubmit) return;
+    if (!balanceWarning) return void save();
+    Alert.alert("Solde insuffisant", `${balanceWarning} Enregistrer quand même ?`, [
+      { text: "Annuler", style: "cancel" },
+      { text: "Enregistrer", onPress: () => void save() },
+    ]);
+  };
 
   return (
     <>
@@ -630,6 +642,13 @@ export default function AddTransaction() {
             <View style={[styles.errorBox, { backgroundColor: isDark ? "#451A03" : "#FEF3C7" }]}>
               <IconSymbol name="exclamationmark.triangle.fill" size={14} color={isDark ? "#F59E0B" : "#B45309"} />
               <Text style={[styles.errorText, { color: isDark ? "#F59E0B" : "#92400E" }]}>{error}</Text>
+            </View>
+          )}
+
+          {balanceWarning && amount > 0 && (
+            <View style={[styles.errorBox, { backgroundColor: isDark ? "#451A03" : "#FEF3C7" }]}>
+              <IconSymbol name="exclamationmark.triangle.fill" size={14} color={isDark ? "#F59E0B" : "#B45309"} />
+              <Text style={[styles.errorText, { color: isDark ? "#F59E0B" : "#92400E" }]}>{balanceWarning}</Text>
             </View>
           )}
 
