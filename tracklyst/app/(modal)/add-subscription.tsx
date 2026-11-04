@@ -1,3 +1,4 @@
+import { pickDateOnWeb } from "@/src/utils/webDatePicker";
 import { AccountChooser } from "@/src/features/accounts/components/AccountChooser";
 import { useAccountStore } from "@/src/features/accounts/store/accountStore";
 import { Colors, Radius } from "@/constants/theme";
@@ -116,6 +117,10 @@ export default function AddSubscriptionScreen() {
 
   const openDatePicker = useCallback(() => {
     const value = new Date(`${nextDate}T00:00:00`);
+    if (Platform.OS === "web") {
+      pickDateOnWeb({ value: nextDate, onPick: setNextDate });
+      return;
+    }
     if (Platform.OS === "android") {
       DateTimePickerAndroid.open({
         value,

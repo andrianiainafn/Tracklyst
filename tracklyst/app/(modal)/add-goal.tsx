@@ -1,3 +1,4 @@
+import { pickDateOnWeb } from "@/src/utils/webDatePicker";
 import { Colors, Radius } from "@/constants/theme";
 import { Button } from "@/src/components/ui/Button";
 import { IconSymbol } from "@/src/components/ui/icon-symbol";
@@ -81,6 +82,10 @@ export default function AddGoal() {
   };
 
   const openDatePicker = useCallback(() => {
+    if (Platform.OS === "web") {
+      pickDateOnWeb({ value: deadline ?? toISODate(new Date()), min: toISODate(new Date()), onPick: setDeadline });
+      return;
+    }
     if (Platform.OS === "android") {
       DateTimePickerAndroid.open({
         value: deadlineDate ?? new Date(),
@@ -93,7 +98,7 @@ export default function AddGoal() {
     } else {
       setShowDatePicker(true);
     }
-  }, [deadlineDate]);
+  }, [deadlineDate, deadline]);
 
   const amount = parseFloat(amountRaw.replace(",", ".")) || 0;
   const canSubmit =

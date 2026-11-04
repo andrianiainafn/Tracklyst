@@ -10,7 +10,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "update": "sh scripts/update.sh"
+    "update": "sh scripts/update.sh",
+    "deploy:web": "sh scripts/deploy-web.sh"
   },
   "dependencies": {
     "@expo/dom-webview": "~58.0.2",

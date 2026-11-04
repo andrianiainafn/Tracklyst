@@ -18,6 +18,8 @@ import { formatCurrency } from "@/src/utils/currency";
  */
 
 const CHANNEL_ID = "reminders";
+// Notifications locales et push : indisponibles dans la version web.
+const WEB = Platform.OS === "web";
 const ENABLED_KEY = "notifications:enabled";
 const TOKEN_KEY = "notifications:push-token";
 const REMINDER_HOUR = 9; // les rappels tombent à 9 h
@@ -48,6 +50,7 @@ export async function isEnabled(): Promise<boolean> {
 
 /** Demande la permission si besoin. Retourne true si les notifications sont autorisées. */
 export async function ensurePermission(): Promise<boolean> {
+  if (WEB) return false;
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
       name: "Rappels et alertes",
@@ -75,6 +78,7 @@ export async function setEnabled(enabled: boolean): Promise<boolean> {
 }
 
 async function canNotify() {
+  if (WEB) return false;
   if (!(await isEnabled())) return false;
   return (await Notifications.getPermissionsAsync()).granted;
 }
@@ -88,6 +92,7 @@ export type DeliveryMode = "server" | "local" | "off";
  * de livraison : « server » si le jeton est enregistré, sinon « local ».
  */
 export async function registerPushToken(): Promise<DeliveryMode> {
+  if (WEB) return "off";
   if (!(await isEnabled()) || !(await ensurePermission())) return "off";
   try {
     const projectId =

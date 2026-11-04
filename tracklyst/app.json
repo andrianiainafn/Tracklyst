@@ -25,8 +25,12 @@
       }
     },
     "web": {
-      "output": "static",
-      "favicon": "./src/assets/images/favicon.png"
+      "output": "single",
+      "favicon": "./src/assets/images/favicon.png",
+      "name": "Tracklyst",
+      "shortName": "Tracklyst",
+      "themeColor": "#10B981",
+      "backgroundColor": "#F8FAFC"
     },
     "plugins": [
       "expo-router",
@@ -67,7 +71,8 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": true,
+      "baseUrl": "/app"
     },
     "extra": {
       "router": {},

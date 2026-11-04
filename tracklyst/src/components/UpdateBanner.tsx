@@ -2,14 +2,14 @@ import { Colors, Radius, Shadow } from "@/constants/theme";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Updates from "expo-updates";
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View, useColorScheme } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /**
  * Mise à jour à distance (EAS Update) téléchargée en arrière-plan :
  * propose de redémarrer l'app pour l'appliquer tout de suite.
  */
-export function UpdateBanner() {
+function UpdateBannerNative() {
   const isDark = useColorScheme() === "dark";
   const c = isDark ? Colors.dark : Colors.light;
   const { bottom } = useSafeAreaInsets();
@@ -34,6 +34,9 @@ export function UpdateBanner() {
     </View>
   );
 }
+
+/** Mises à jour à distance : app native uniquement (le web est toujours à jour). */
+export const UpdateBanner = Platform.OS === "web" ? () => null : UpdateBannerNative;
 
 const styles = StyleSheet.create({
   banner: {

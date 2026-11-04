@@ -343,9 +343,9 @@ export default function LandingPage() {
             <a href="#faq" className="transition hover:text-white">Questions</a>
           </div>
           <div className="flex items-center gap-1.5">
-            <Link href="/login" className="hidden h-10 items-center rounded-xl px-4 text-[14px] font-semibold text-white/80 transition hover:bg-white/[0.06] hover:text-white sm:flex">
+            <a href="/app" className="hidden h-10 items-center rounded-xl px-4 text-[14px] font-semibold text-white/80 transition hover:bg-white/[0.06] hover:text-white sm:flex">
               Se connecter
-            </Link>
+            </a>
             <a
               href="#telecharger"
               className="flex h-10 items-center gap-1.5 rounded-xl bg-emerald-400 px-4 text-[14px] font-bold text-[#03140e] transition hover:bg-emerald-300"
@@ -386,13 +386,13 @@ export default function LandingPage() {
             <div className="animate-rise" style={{ animationDelay: "300ms" }}>
               <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <AndroidButton className="w-full sm:w-auto" />
-                <Link
-                  href="/login"
+                <a
+                  href="/app"
                   className="inline-flex h-[60px] w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.04] px-7 text-[15px] font-bold backdrop-blur transition hover:border-white/30 hover:bg-white/[0.08] sm:w-auto"
                 >
                   <Icon path={mdiWeb} size={20} className="text-emerald-300" />
                   Ouvrir la version web
-                </Link>
+                </a>
               </div>
             </div>
           </div>
@@ -535,13 +535,13 @@ export default function LandingPage() {
                 </p>
                 <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
                   <AndroidButton className="w-full sm:w-auto" />
-                  <Link
-                    href="/login"
+                  <a
+                    href="/app"
                     className="inline-flex h-[60px] w-full items-center justify-center gap-2 rounded-2xl border border-white/20 px-7 text-[15px] font-bold transition hover:bg-white/[0.08] sm:w-auto"
                   >
                     Version web
                     <Icon path={mdiArrowRight} size={18} />
-                  </Link>
+                  </a>
                 </div>
                 <p className="mt-5 text-[13px] font-medium text-white/45">Android 7 ou plus récent · iPhone : version web</p>
               </div>
@@ -586,7 +586,7 @@ export default function LandingPage() {
           <Logo />
           <div className="flex gap-6 font-medium">
             <a href={APK_URL} download className="transition hover:text-white">Application Android</a>
-            <Link href="/login" className="transition hover:text-white">Version web</Link>
+            <a href="/app" className="transition hover:text-white">Version web</a>
           </div>
           <p>© {new Date().getFullYear()} Tracklyst</p>
         </div>

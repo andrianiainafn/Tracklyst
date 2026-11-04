@@ -204,6 +204,9 @@ export default function SignupScreen() {
             icon={!isLoading ? <Feather name="arrow-right" size={16} color="#fff" /> : undefined}
           />
 
+          {/* Google / GitHub : app native uniquement (non configurés pour le web). */}
+          {Platform.OS !== "web" && (
+          <>
           <View style={styles.divider}>
             <View style={[styles.dividerLine, { backgroundColor: c.border }]} />
             <Text style={[styles.dividerText, { color: c.textSubtle }]}>
@@ -232,6 +235,8 @@ export default function SignupScreen() {
               <Text style={[styles.oauthTextDark, { color: c.text }]}>Google</Text>
             </TouchableOpacity>
           </View>
+          </>
+          )}
 
           <Text style={[styles.terms, { color: c.textSubtle }]}>
             En créant un compte, vous acceptez nos{" "}

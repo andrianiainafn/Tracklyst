@@ -13,7 +13,12 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import * as Notifications from "expo-notifications";
-import { Linking } from "react-native";
+import { Linking, Platform, StyleSheet, View } from "react-native";
+import { Colors } from "@/constants/theme";
+import { installWebAlert } from "@/src/utils/webAlert";
+
+// Web : Alert.alert de React Native ne fait rien, on utilise les boîtes du navigateur.
+if (Platform.OS === "web") installWebAlert();
 import "react-native-reanimated";
 import "react-native-url-polyfill/auto";
 
@@ -43,7 +48,7 @@ function AuthGuard() {
 }
 
 /** Tap sur une notification → ouvre l'écran concerné (data.url). */
-function NotificationTapHandler() {
+function NotificationTapHandlerNative() {
   const router = useRouter();
   const response = Notifications.useLastNotificationResponse();
 
@@ -54,6 +59,9 @@ function NotificationTapHandler() {
 
   return null;
 }
+
+// Pas de notifications dans la version web.
+const NotificationTapHandler = Platform.OS === "web" ? () => null : NotificationTapHandlerNative;
 
 function DeepLinkHandler() {
   const { setSession } = useAuthStore();
@@ -88,6 +96,14 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+      {/* Web sur ordinateur : l'app garde sa largeur de téléphone, centrée. */}
+      <View
+        style={[
+          styles.page,
+          { backgroundColor: colorScheme === "dark" ? Colors.dark.surfaceAlt : Colors.light.surfaceAlt },
+        ]}
+      >
+      <View style={[styles.app, { backgroundColor: colorScheme === "dark" ? Colors.dark.bg : Colors.light.bg }]}>
       <AuthGuard />
       <DeepLinkHandler />
       <NotificationTapHandler />
@@ -99,7 +115,17 @@ export default function RootLayout() {
       </Stack>
       <UpdateBanner />
       <EncryptionGate />
+      </View>
+      </View>
       <StatusBar style="auto" />
     </ThemeProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  page: { flex: 1 },
+  app:
+    Platform.OS === "web"
+      ? { flex: 1, width: "100%", maxWidth: 480, alignSelf: "center", overflow: "hidden" }
+      : { flex: 1 },
+});
