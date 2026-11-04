@@ -5,6 +5,8 @@ import { accountName } from "@/src/features/accounts/components/AccountIcon";
 import { accountService } from "@/src/features/accounts/services/accountService";
 import { useAccountStore } from "@/src/features/accounts/store/accountStore";
 import { useActiveBudget } from "@/src/features/budgets/hooks/useActiveBudget";
+import { budgetService } from "@/src/features/budgets/services/budgetService";
+import { useBudgetStore } from "@/src/features/budgets/store/budgetStore";
 import { AccountPicker } from "@/src/features/budgets/components/AccountPicker";
 import type { AccountKind } from "@/src/features/budgets/constants/accountLabels";
 import { formatCurrency, getCurrencySymbol } from "@/src/utils/currency";
@@ -35,9 +37,11 @@ export default function AccountFormModal() {
 
   const [kind, setKind] = useState<AccountKind | null>((existing?.kind as AccountKind) ?? null);
   const [name, setName] = useState(existing?.name ?? "");
-  const [initialRaw, setInitialRaw] = useState(
-    existing && Number(existing.initial_amount) !== 0 ? String(Number(existing.initial_amount)) : "",
-  );
+  // Solde actuel saisi (ce que montre MVola, le relevé bancaire…).
+  const shownBalance = existing ? Math.round(balances[existing.id] ?? 0) : 0;
+  const [balanceRaw, setBalanceRaw] = useState(existing ? String(shownBalance) : "");
+  const desired = parse(balanceRaw);
+  const balanceChanged = !!existing && balanceRaw.trim() !== "" && desired !== shownBalance;
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -53,6 +57,8 @@ export default function AccountFormModal() {
     try {
       await fn();
       await load(activeBudget.id);
+      // Le solde de départ d'un compte compte dans le total du budget.
+      useBudgetStore.getState().setBalance(await budgetService.getBalance(activeBudget.id));
       router.back();
     } catch (err) {
       Alert.alert("Compte", getErrorMessage(err, "Enregistrement impossible."));
@@ -62,10 +68,16 @@ export default function AccountFormModal() {
 
   const save = () => {
     if (!canSave || !activeBudget || !kind) return;
-    const input = { kind, name: name.trim() || null, initial_amount: parse(initialRaw) };
-    run(() =>
-      existing ? accountService.updateAccount(existing, input) : accountService.createAccount({ ...input, budget_id: activeBudget.id }),
-    );
+    const base = { kind, name: name.trim() || null };
+    run(async () => {
+      if (!existing) return accountService.createAccount({ ...base, initial_amount: desired, budget_id: activeBudget.id });
+      if (!balanceChanged) return accountService.updateAccount(existing, base);
+      // Nouveau solde : on corrige le solde de départ de l'écart, calculé sur le solde le plus récent
+      // (aucune fausse dépense ni faux revenu dans les statistiques).
+      const fresh = await accountService.getBalances(activeBudget.id);
+      const gap = desired - (fresh[existing.id] ?? 0);
+      return accountService.updateAccount(existing, { ...base, initial_amount: Number(existing.initial_amount) + gap });
+    });
   };
 
   const remove = () => {
@@ -83,14 +95,6 @@ export default function AccountFormModal() {
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: bottom + 24 }]} keyboardShouldPersistTaps="handled">
-        {existing && (
-          <View style={[styles.balance, { backgroundColor: c.surfaceAlt }]}>
-            <Text style={{ color: c.text, fontSize: 14 }}>
-              Solde actuel : <Text style={{ fontWeight: "800" }}>{formatCurrency(Math.round(balances[existing.id] ?? 0), currency)}</Text>
-            </Text>
-          </View>
-        )}
-
         <Text style={[styles.label, { color: c.textSubtle }]}>TYPE ET NOM DU COMPTE</Text>
         <AccountPicker
           kind={kind}
@@ -103,18 +107,27 @@ export default function AccountFormModal() {
         />
 
         <Input
-          label={`Solde de départ (${getCurrencySymbol(currency)})`}
-          value={initialRaw}
-          onChangeText={(t) => setInitialRaw(t.replace(/[^0-9.,\s-]/g, ""))}
-          keyboardType="numeric"
+          label={`Solde actuel du compte (${getCurrencySymbol(currency)})`}
+          value={balanceRaw}
+          onChangeText={(t) => setBalanceRaw(t.replace(/[^0-9.,\s-]/g, ""))}
+          keyboardType="numbers-and-punctuation"
           placeholder="0"
           containerStyle={{ marginTop: 8 }}
         />
         <Text style={[styles.hint, { color: c.textSubtle }]}>
           {existing
-            ? "Montant présent sur ce compte avant votre première opération enregistrée. Le corriger change le solde du compte et du budget."
-            : "L'argent déjà présent sur ce compte aujourd'hui (0 si vous allez y transférer de l'argent)."}
+            ? "Corrigez-le si le montant réel diffère (solde affiché par MVola, votre relevé…). Le total du budget suit ; vos dépenses et revenus ne changent pas."
+            : "L'argent présent sur ce compte aujourd'hui (0 si vous allez y transférer de l'argent)."}
         </Text>
+        {balanceChanged && (
+          <View style={[styles.balance, { backgroundColor: c.tintMuted }]}>
+            <Text style={{ color: c.text, fontSize: 13 }}>
+              Ajustement de {desired - shownBalance > 0 ? "+" : "−"}
+              {formatCurrency(Math.abs(desired - shownBalance), currency)} sur ce compte (avant :{" "}
+              {formatCurrency(shownBalance, currency)}).
+            </Text>
+          </View>
+        )}
 
         <Button label={existing ? "Enregistrer" : "Ajouter le compte"} onPress={save} disabled={!canSave} loading={saving} style={{ marginTop: 8 }} />
 
