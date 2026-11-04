@@ -10,7 +10,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "update": "eas update --channel production --environment production --platform android --message"
+    "update": "sh scripts/update.sh"
   },
   "dependencies": {
     "@expo/dom-webview": "~58.0.2",
