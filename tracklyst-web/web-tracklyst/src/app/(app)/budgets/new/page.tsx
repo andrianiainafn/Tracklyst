@@ -91,7 +91,7 @@ export default function NewBudgetPage() {
           />
         </Field>
 
-        <Field label="Premier compte : où est cet argent ?" hint="MVola, compte bancaire, espèces… Vous pourrez ajouter d'autres comptes ensuite et y répartir l'argent.">
+        <Field group label="Premier compte : où est cet argent ?" hint="MVola, compte bancaire, espèces… Vous pourrez ajouter d'autres comptes ensuite et y répartir l'argent.">
           <AccountPicker
             kind={accountKind}
             name={accountName}
@@ -118,7 +118,7 @@ export default function NewBudgetPage() {
           </div>
         </Field>
 
-        <Field label="Devise">
+        <Field group label="Devise">
           <div className="grid grid-cols-3 gap-2">
             {CURRENCIES.map((c) => (
               <button
@@ -137,7 +137,7 @@ export default function NewBudgetPage() {
           </div>
         </Field>
 
-        <Field label="Couleur">
+        <Field group label="Couleur">
           <div className="flex flex-wrap gap-3">
             {BUDGET_THEMES.map((t) => (
               <button

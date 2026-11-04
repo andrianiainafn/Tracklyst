@@ -122,7 +122,7 @@ function BudgetEditForm({ budget }: { budget: Budget }) {
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} className={inputClass} />
         </Field>
 
-        <Field label="Couleur">
+        <Field group label="Couleur">
           <div className="flex flex-wrap gap-3">
             {BUDGET_THEMES.map((t) => (
               <button

@@ -206,13 +206,24 @@ export function ErrorBanner({ message }: { message: string }) {
 export const inputClass =
   "h-12 w-full min-w-0 rounded-[14px] border border-line bg-surface px-4 text-[15px] outline-none placeholder:text-subtle focus:border-tint";
 
-/** Libellé + champ de formulaire. */
-export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return (
-    <label className="flex min-w-0 flex-col gap-1.5">
+/**
+ * Libellé + champ de formulaire. `group` pour un ensemble de boutons (puces,
+ * couleurs…) : un <label> transmettrait au premier bouton les taps tombés à
+ * côté des puces (ex. désélection du type de compte).
+ */
+export function Field({ label, hint, group, children }: { label: string; hint?: string; group?: boolean; children: ReactNode }) {
+  const content = (
+    <>
       <span className="text-[13px] font-semibold text-muted">{label}</span>
       {children}
       {hint && <span className="text-xs text-subtle">{hint}</span>}
-    </label>
+    </>
+  );
+  return group ? (
+    <div role="group" aria-label={label} className="flex min-w-0 flex-col gap-1.5">
+      {content}
+    </div>
+  ) : (
+    <label className="flex min-w-0 flex-col gap-1.5">{content}</label>
   );
 }

@@ -62,7 +62,7 @@ export function AccountForm({ existing }: { existing?: Account }) {
         </p>
       )}
 
-      <Field label="Type et nom du compte">
+      <Field group label="Type et nom du compte">
         <AccountPicker
           kind={kind}
           name={name}

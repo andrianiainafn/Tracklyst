@@ -98,7 +98,7 @@ export function SubscriptionForm({ existing }: { existing?: Subscription }) {
         </div>
       </Field>
 
-      <Field label="Fréquence">
+      <Field group label="Fréquence">
         <Segmented
           value={frequency}
           onChange={setFrequency}
