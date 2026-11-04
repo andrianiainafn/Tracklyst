@@ -104,7 +104,7 @@ export const goalService = {
   /** Modifie un versement / retrait ; le montant épargné est recalculé par la base. */
   async updateGoalTransaction(
     tx: Pick<GoalTransaction, "id" | "budget_id">,
-    dto: { amount: number; description: string | null },
+    dto: { amount: number; description: string | null; account_id?: string | null },
   ): Promise<void> {
     const { error } = await supabase
       .from("goal_transactions")

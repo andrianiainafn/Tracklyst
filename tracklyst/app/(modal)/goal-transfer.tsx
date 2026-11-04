@@ -1,3 +1,5 @@
+import { AccountChooser } from "@/src/features/accounts/components/AccountChooser";
+import { refreshAccounts, useAccountStore } from "@/src/features/accounts/store/accountStore";
 import { Colors, Radius } from "@/constants/theme";
 import { Button } from "@/src/components/ui/Button";
 import { Card } from "@/src/components/ui/Card";
@@ -13,7 +15,7 @@ import { formatCurrency, getCurrencySymbol } from "@/src/utils/currency";
 import { todayISO } from "@/src/utils/date";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -46,6 +48,15 @@ export default function GoalTransferModal() {
   );
 
   const { create, isLoading } = useGoalTransactions(goalId);
+  // Compte d'où vient le versement / où revient le retrait.
+  const accounts = useAccountStore((st) => (st.budgetId === activeBudget?.id ? st.accounts : []));
+  const accountBalances = useAccountStore((st) => st.balances);
+  const [accountChoice, setAccountChoice] = useState<string | null>(null);
+  useEffect(() => {
+    if (activeBudget?.id) useAccountStore.getState().load(activeBudget.id).catch(() => {});
+  }, [activeBudget?.id]);
+  const activeAccounts = accounts.filter((a) => !a.is_archived);
+  const accountId = accountChoice ?? activeAccounts[0]?.id ?? null;
   const goalTransactions = useGoalStore((st) => st.goalTransactions).filter((t) => t.goal_id === goalId);
 
   const [mode, setMode] = useState<Mode>("deposit");
@@ -75,7 +86,9 @@ export default function GoalTransferModal() {
         type: isDeposit ? "deposit" : "withdrawal",
         description: description.trim() || undefined,
         date: todayISO(),
+        account_id: accountId,
       });
+      refreshAccounts();
 
       // Montant épargné et statut recalculés par la base (migration 00012).
       const updatedGoal = await goalService.getGoal(goal.id);
@@ -222,6 +235,21 @@ export default function GoalTransferModal() {
                 numberOfLines={3}
                 style={styles.textarea}
               />
+
+              {activeAccounts.length > 0 && activeBudget && (
+                <View style={{ gap: 8, marginTop: 4 }}>
+                  <Text style={[styles.historyTitle, { color: c.textSubtle }]}>
+                    {mode === "deposit" ? "DEPUIS LE COMPTE" : "VERS LE COMPTE"}
+                  </Text>
+                  <AccountChooser
+                    accounts={accounts}
+                    balances={accountBalances}
+                    value={accountId}
+                    onChange={setAccountChoice}
+                    currency={activeBudget.currency}
+                  />
+                </View>
+              )}
 
               <Button
                 label={

@@ -118,6 +118,7 @@ export async function moveGoal(
   amount: number,
   type: "deposit" | "withdrawal",
   description: string | null,
+  accountId: string | null = null,
 ) {
   check(
     await supabase.from("goal_transactions").insert(
@@ -128,6 +129,7 @@ export async function moveGoal(
         type,
         description,
         date: todayISO(),
+        account_id: accountId,
       }),
     ),
   );
@@ -504,6 +506,7 @@ export interface GoalMovement {
   description: string | null;
   date: string;
   created_at: string;
+  account_id: string | null;
 }
 
 const goalError = (err: unknown, fallback: string) => {
@@ -515,7 +518,7 @@ export async function getGoalMovements(goal: Pick<Goal, "id" | "budget_id">): Pr
   const rows = check(
     await supabase
       .from("goal_transactions")
-      .select("id, goal_id, budget_id, amount, type, description, date, created_at")
+      .select("id, goal_id, budget_id, amount, type, description, date, created_at, account_id")
       .eq("goal_id", goal.id)
       .order("date", { ascending: false })
       .order("created_at", { ascending: false }),
@@ -523,7 +526,10 @@ export async function getGoalMovements(goal: Pick<Goal, "id" | "budget_id">): Pr
   return fieldCrypto.decrypt("goal_transactions", goal.budget_id, rows);
 }
 
-export async function updateGoalMovement(m: GoalMovement, input: { amount: number; description: string | null }) {
+export async function updateGoalMovement(
+  m: GoalMovement,
+  input: { amount: number; description: string | null; account_id: string | null },
+) {
   try {
     check(
       await supabase

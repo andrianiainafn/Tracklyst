@@ -4,6 +4,7 @@ import { mdiPencilOutline } from "@mdi/js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useState } from "react";
+import { AccountChooser } from "@/components/AccountChooser";
 import { GoalHistory } from "@/components/GoalHistory";
 import { PageHeader } from "@/components/PageHeader";
 import { Button, Card, Icon, Segmented } from "@/components/ui";
@@ -16,7 +17,7 @@ type Mode = "deposit" | "withdrawal";
 export default function GoalMovePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { goals, balance, loaded, refresh } = useApp();
+  const { goals, balance, loaded, refresh, accounts, accountBalances, hidden } = useApp();
   const budget = useActiveBudget();
   const currency = budget?.currency ?? "MGA";
   const goal = goals.find((g) => g.id === id);
@@ -24,6 +25,7 @@ export default function GoalMovePage({ params }: { params: Promise<{ id: string 
   const [mode, setMode] = useState<Mode>("deposit");
   const [amountRaw, setAmountRaw] = useState("");
   const [note, setNote] = useState("");
+  const [accountChoice, setAccountChoice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,6 +39,10 @@ export default function GoalMovePage({ params }: { params: Promise<{ id: string 
   }
 
   const amount = parseAmount(amountRaw);
+  const activeAccounts = accounts.filter((a) => !a.is_archived);
+  const accountId = accountChoice ?? activeAccounts[0]?.id ?? null;
+  const accountBalance = accountId ? (accountBalances[accountId] ?? 0) : null;
+  const accountShort = mode === "deposit" && accountBalance != null && amount > accountBalance + 0.0001;
   const max = mode === "deposit" ? balance : Number(goal.current_amount);
   const tooMuch = amount > max + 0.0001;
   const canSave = amount > 0 && !tooMuch && !saving;
@@ -46,7 +52,7 @@ export default function GoalMovePage({ params }: { params: Promise<{ id: string 
     setSaving(true);
     setError(null);
     try {
-      await moveGoal(goal, amount, mode, note.trim() || null);
+      await moveGoal(goal, amount, mode, note.trim() || null, accountId);
       await refresh();
       router.back();
     } catch (err) {
@@ -102,6 +108,27 @@ export default function GoalMovePage({ params }: { params: Promise<{ id: string 
             {mode === "deposit" ? "Maximum disponible" : "Maximum épargné"} : {money(max, currency)}
           </span>
         </label>
+
+        {activeAccounts.length > 0 && (
+          <section className="flex flex-col gap-2.5">
+            <h2 className="text-[13px] font-semibold text-muted">
+              {mode === "deposit" ? "Depuis le compte" : "Vers le compte"}
+            </h2>
+            <AccountChooser
+              accounts={accounts}
+              balances={accountBalances}
+              value={accountId}
+              onChange={setAccountChoice}
+              currency={currency}
+              hidden={hidden}
+            />
+            {accountShort && (
+              <p className="rounded-[12px] bg-warning/15 px-3 py-2 text-[13px]">
+                Ce compte n&apos;a que {money(accountBalance ?? 0, currency)} : son solde deviendra négatif.
+              </p>
+            )}
+          </section>
+        )}
 
         <label className="flex flex-col gap-1.5">
           <span className="text-[13px] font-semibold text-muted">Note (optionnelle)</span>

@@ -1,6 +1,8 @@
 import { Colors } from "@/constants/theme";
 import { Button } from "@/src/components/ui/Button";
 import { Input } from "@/src/components/ui/Input";
+import { AccountChooser } from "@/src/features/accounts/components/AccountChooser";
+import { refreshAccounts, useAccountStore } from "@/src/features/accounts/store/accountStore";
 import { budgetService } from "@/src/features/budgets/services/budgetService";
 import { useBudgetStore } from "@/src/features/budgets/store/budgetStore";
 import { goalService } from "@/src/features/goals/services/goalService";
@@ -32,6 +34,9 @@ export default function GoalMovementModal() {
   const [amountRaw, setAmountRaw] = useState(movement ? String(Number(movement.amount)) : "");
   const [note, setNote] = useState(movement?.description ?? "");
   const [busy, setBusy] = useState(false);
+  const [accountId, setAccountId] = useState<string | null>(movement?.account_id ?? null);
+  const accounts = useAccountStore((st) => st.accounts);
+  const accountBalances = useAccountStore((st) => st.balances);
   const amount = parse(amountRaw);
   const deposit = movement?.type === "deposit";
 
@@ -61,6 +66,7 @@ export default function GoalMovementModal() {
       store.updateGoal(goal.id, { current_amount: goal.current_amount, status: goal.status });
       store.setGoalTransactions(list);
       useBudgetStore.getState().setBalance(balance);
+      refreshAccounts();
       router.back();
     } catch (err) {
       Alert.alert("Objectif", getErrorMessage(err, "Une erreur est survenue."));
@@ -88,13 +94,19 @@ export default function GoalMovementModal() {
           keyboardType="numeric"
           autoFocus
         />
+        {accounts.some((a) => !a.is_archived) && (
+          <View style={{ gap: 8 }}>
+            <Text style={[styles.label, { color: c.textSubtle }]}>{deposit ? "DEPUIS LE COMPTE" : "VERS LE COMPTE"}</Text>
+            <AccountChooser accounts={accounts} balances={accountBalances} value={accountId} onChange={setAccountId} currency={currency ?? "MGA"} />
+          </View>
+        )}
         <Input label="Note (facultative)" value={note} onChangeText={setNote} placeholder={deposit ? "Ex : épargne de novembre" : "Ex : achat matériel"} />
         <Text style={[styles.hint, { color: c.textSubtle }]}>
           Le montant épargné de l&apos;objectif et le solde du budget sont recalculés automatiquement.
         </Text>
         <Button
           label={`Enregistrer · ${formatCurrency(amount, currency)}`}
-          onPress={() => run(() => goalService.updateGoalTransaction(movement, { amount, description: note.trim() || null }))}
+          onPress={() => run(() => goalService.updateGoalTransaction(movement, { amount, description: note.trim() || null, account_id: accountId }))}
           disabled={amount <= 0 || busy}
           loading={busy}
         />
@@ -114,4 +126,5 @@ const styles = StyleSheet.create({
   content: { padding: 16, gap: 12 },
   empty: { flex: 1, alignItems: "center", justifyContent: "center" },
   hint: { fontSize: 12, lineHeight: 17 },
+  label: { fontSize: 11, fontWeight: "700", letterSpacing: 1.2 },
 });

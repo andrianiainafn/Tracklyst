@@ -56,6 +56,7 @@ export interface GoalTransaction {
   date: string;
   created_by: string | null;
   created_at: string;
+  account_id?: string | null;
 }
 
 export interface CreateGoalTransactionDTO {
@@ -65,5 +66,6 @@ export interface CreateGoalTransactionDTO {
   type: GoalTxType;
   description?: string;
   date: string;
+  account_id?: string | null;
 }
 

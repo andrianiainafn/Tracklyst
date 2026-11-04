@@ -5,7 +5,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Button, Card, Field, Icon, SectionTitle, Sheet, cx, inputClass } from "@/components/ui";
 import { deleteGoalMovement, getGoalMovements, updateGoalMovement, type GoalMovement } from "@/lib/data";
 import { currencySymbol, money, parseAmount, shortDate } from "@/lib/format";
-import type { Goal } from "@/lib/types";
+import type { Account, Goal } from "@/lib/types";
+import { useApp } from "@/stores/app";
+import { AccountChooser, AccountIcon, accountName } from "@/components/AccountChooser";
 
 /** Historique des versements / retraits d'un objectif, modifiables. */
 export function GoalHistory({
@@ -20,6 +22,8 @@ export function GoalHistory({
   version: number;
   onChanged: () => Promise<void>;
 }) {
+  const { accounts, accountBalances, hidden } = useApp();
+  const accountById = new Map(accounts.map((a) => [a.id, a]));
   const [movements, setMovements] = useState<GoalMovement[]>([]);
   const [editing, setEditing] = useState<GoalMovement | null>(null);
 
@@ -54,7 +58,16 @@ export function GoalHistory({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[14px] font-semibold">{m.description || (deposit ? "Versement" : "Retrait")}</span>
-                <span className="block text-xs text-subtle">{shortDate(m.date)}</span>
+                <span className="flex items-center gap-1 text-xs text-subtle">
+                  {shortDate(m.date)}
+                  {m.account_id && accountById.get(m.account_id) && (
+                    <>
+                      <span>·</span>
+                      <AccountIcon account={accountById.get(m.account_id)!} size={14} />
+                      <span className="truncate">{accountName(accountById.get(m.account_id)!)}</span>
+                    </>
+                  )}
+                </span>
               </span>
               <span className={cx("shrink-0 text-[14px] font-bold", deposit ? "text-tint" : "text-danger")}>
                 {deposit ? "+" : "−"}
@@ -72,6 +85,9 @@ export function GoalHistory({
             key={editing.id}
             movement={editing}
             currency={currency}
+            accounts={accounts}
+            balances={accountBalances}
+            hidden={hidden}
             onDone={async () => {
               setEditing(null);
               await onChanged();
@@ -84,7 +100,22 @@ export function GoalHistory({
   );
 }
 
-function MovementForm({ movement, currency, onDone }: { movement: GoalMovement; currency: string; onDone: () => Promise<void> }) {
+function MovementForm({
+  movement,
+  currency,
+  accounts,
+  balances,
+  hidden,
+  onDone,
+}: {
+  movement: GoalMovement;
+  currency: string;
+  accounts: Account[];
+  balances: Record<string, number>;
+  hidden: boolean;
+  onDone: () => Promise<void>;
+}) {
+  const [accountId, setAccountId] = useState<string | null>(movement.account_id);
   const [amountRaw, setAmountRaw] = useState(String(Number(movement.amount)));
   const [note, setNote] = useState(movement.description ?? "");
   const [busy, setBusy] = useState(false);
@@ -117,6 +148,11 @@ function MovementForm({ movement, currency, onDone }: { movement: GoalMovement; 
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-muted">{currencySymbol(currency)}</span>
         </div>
       </Field>
+      {accounts.some((a) => !a.is_archived) && (
+        <Field group label={movement.type === "deposit" ? "Depuis le compte" : "Vers le compte"}>
+          <AccountChooser accounts={accounts} balances={balances} value={accountId} onChange={setAccountId} currency={currency} hidden={hidden} />
+        </Field>
+      )}
       <Field label="Note">
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Facultative" className={inputClass} />
       </Field>
@@ -127,7 +163,7 @@ function MovementForm({ movement, currency, onDone }: { movement: GoalMovement; 
       <Button
         disabled={amount <= 0}
         loading={busy}
-        onClick={() => run(() => updateGoalMovement(movement, { amount, description: note.trim() || null }))}
+        onClick={() => run(() => updateGoalMovement(movement, { amount, description: note.trim() || null, account_id: accountId }))}
       >
         Enregistrer · {money(amount, currency)}
       </Button>
