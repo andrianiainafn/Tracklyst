@@ -19,7 +19,10 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.andrianiainafn.tracklyst",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "web": {
       "output": "static",
@@ -71,6 +74,9 @@
       "eas": {
         "projectId": "a970a3fe-76cf-431e-9e26-2667e6499411"
       }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/a970a3fe-76cf-431e-9e26-2667e6499411"
     }
   }
 }
