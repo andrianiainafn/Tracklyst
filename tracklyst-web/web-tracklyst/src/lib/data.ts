@@ -131,21 +131,8 @@ export async function moveGoal(
       }),
     ),
   );
-  const current = Number(goal.current_amount) + (type === "deposit" ? amount : -amount);
-  const status =
-    goal.status === "in_progress" || goal.status === "completed"
-      ? current >= Number(goal.target_amount)
-        ? "completed"
-        : "in_progress"
-      : goal.status;
-  const row = check(
-    await supabase
-      .from("goals")
-      .update({ current_amount: current, status })
-      .eq("id", goal.id)
-      .select("*")
-      .single(),
-  ) as Goal;
+  // Montant épargné et statut recalculés par la base (migration 00012).
+  const row = check(await supabase.from("goals").select("*").eq("id", goal.id).single()) as Goal;
   return fieldCrypto.decryptOne("goals", goal.budget_id, row);
 }
 
@@ -504,4 +491,55 @@ export async function createTransfer(input: {
 
 export async function deleteTransfer(id: string) {
   check(await supabase.from("account_transfers").delete().eq("id", id));
+}
+
+// ─── Mouvements d'un objectif (migration 00012 : montant recalculé par la base) ──
+
+export interface GoalMovement {
+  id: string;
+  goal_id: string;
+  budget_id: string;
+  amount: number;
+  type: "deposit" | "withdrawal";
+  description: string | null;
+  date: string;
+  created_at: string;
+}
+
+const goalError = (err: unknown, fallback: string) => {
+  const msg = errorMessage(err, fallback);
+  return new Error(msg.includes("goal_negative") ? "Impossible : il y aurait plus d'argent retiré de cet objectif que versé." : msg);
+};
+
+export async function getGoalMovements(goal: Pick<Goal, "id" | "budget_id">): Promise<GoalMovement[]> {
+  const rows = check(
+    await supabase
+      .from("goal_transactions")
+      .select("id, goal_id, budget_id, amount, type, description, date, created_at")
+      .eq("goal_id", goal.id)
+      .order("date", { ascending: false })
+      .order("created_at", { ascending: false }),
+  ) as GoalMovement[];
+  return fieldCrypto.decrypt("goal_transactions", goal.budget_id, rows);
+}
+
+export async function updateGoalMovement(m: GoalMovement, input: { amount: number; description: string | null }) {
+  try {
+    check(
+      await supabase
+        .from("goal_transactions")
+        .update(await fieldCrypto.encrypt("goal_transactions", m.budget_id, input))
+        .eq("id", m.id),
+    );
+  } catch (err) {
+    throw goalError(err, "Modification impossible.");
+  }
+}
+
+export async function deleteGoalMovement(id: string) {
+  try {
+    check(await supabase.from("goal_transactions").delete().eq("id", id));
+  } catch (err) {
+    throw goalError(err, "Suppression impossible.");
+  }
 }

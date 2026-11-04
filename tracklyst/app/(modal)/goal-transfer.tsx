@@ -46,6 +46,7 @@ export default function GoalTransferModal() {
   );
 
   const { create, isLoading } = useGoalTransactions(goalId);
+  const goalTransactions = useGoalStore((st) => st.goalTransactions).filter((t) => t.goal_id === goalId);
 
   const [mode, setMode] = useState<Mode>("deposit");
   const [amountRaw, setAmountRaw] = useState("");
@@ -67,9 +68,6 @@ export default function GoalTransferModal() {
 
     try {
       const isDeposit = mode === "deposit";
-      const newCurrent = isDeposit
-        ? goal.current_amount + amount
-        : goal.current_amount - amount;
 
       await create({
         budget_id: activeBudget.id,
@@ -79,10 +77,8 @@ export default function GoalTransferModal() {
         date: todayISO(),
       });
 
-      const updatedGoal = await goalService.updateGoal(goal.id, {
-        current_amount: newCurrent,
-        status: newCurrent >= goal.target_amount ? "completed" : goal.status,
-      });
+      // Montant épargné et statut recalculés par la base (migration 00012).
+      const updatedGoal = await goalService.getGoal(goal.id);
       updateGoal(goal.id, {
         current_amount: updatedGoal.current_amount,
         status: updatedGoal.status,
@@ -238,6 +234,43 @@ export default function GoalTransferModal() {
                 icon={<IconSymbol name="checkmark.circle.fill" size={20} color="#fff" />}
                 style={{ marginTop: 8, backgroundColor: accentColor }}
               />
+
+              {goalTransactions.length > 0 && (
+                <View style={{ marginTop: 20, gap: 8 }}>
+                  <Text style={[styles.historyTitle, { color: c.textSubtle }]}>HISTORIQUE</Text>
+                  <Card padding={0} style={{ overflow: "hidden" }}>
+                    {goalTransactions.map((m, i) => {
+                      const deposit = m.type === "deposit";
+                      return (
+                        <Pressable
+                          key={m.id}
+                          onPress={() => router.push({ pathname: "/(modal)/goal-movement", params: { id: m.id } } as any)}
+                          style={({ pressed }) => [
+                            styles.historyRow,
+                            i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
+                            pressed && { backgroundColor: c.surfaceAlt },
+                          ]}
+                        >
+                          <View style={[styles.historyIcon, { backgroundColor: deposit ? c.tintMuted : c.dangerMuted }]}>
+                            <Ionicons name={deposit ? "arrow-down" : "arrow-up"} size={16} color={deposit ? c.tint : c.danger} />
+                          </View>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text numberOfLines={1} style={[styles.historyLabel, { color: c.text }]}>
+                              {m.description || (deposit ? "Versement" : "Retrait")}
+                            </Text>
+                            <Text style={[styles.historyDate, { color: c.textSubtle }]}>{m.date}</Text>
+                          </View>
+                          <Text style={[styles.historyAmount, { color: deposit ? c.tint : c.danger }]}>
+                            {deposit ? "+" : "−"}
+                            {formatCurrency(Number(m.amount), activeBudget?.currency)}
+                          </Text>
+                          <Ionicons name="create-outline" size={16} color={c.textSubtle} />
+                        </Pressable>
+                      );
+                    })}
+                  </Card>
+                </View>
+              )}
             </>
           )}
         </ScrollView>
@@ -248,6 +281,12 @@ export default function GoalTransferModal() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  historyTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 1.2 },
+  historyRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  historyIcon: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  historyLabel: { fontSize: 14, fontWeight: "600" },
+  historyDate: { fontSize: 12, marginTop: 1 },
+  historyAmount: { fontSize: 14, fontWeight: "800" },
   scroll: { paddingHorizontal: 20, paddingTop: 20, gap: 18 },
   goalName: { fontSize: 15, fontWeight: "700", marginBottom: 4 },
   goalHeader: { flexDirection: "row", alignItems: "flex-start", gap: 8 },

@@ -4,6 +4,7 @@ import { mdiPencilOutline } from "@mdi/js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useState } from "react";
+import { GoalHistory } from "@/components/GoalHistory";
 import { PageHeader } from "@/components/PageHeader";
 import { Button, Card, Icon, Segmented } from "@/components/ui";
 import { errorMessage, moveGoal } from "@/lib/data";
@@ -118,6 +119,8 @@ export default function GoalMovePage({ params }: { params: Promise<{ id: string 
           {mode === "deposit" ? "Verser dans l'objectif" : "Retirer"}
           {amount > 0 ? ` · ${money(amount, currency)}` : ""}
         </Button>
+
+        <GoalHistory goal={goal} currency={currency} version={Number(goal.current_amount)} onChanged={refresh} />
       </div>
     </>
   );

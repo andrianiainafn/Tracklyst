@@ -52,6 +52,10 @@ export default function ModalLayout() {
         options={{ ...commonOptions, title: "Nouvel objectif" }}
       />
       <Stack.Screen
+        name="goal-movement"
+        options={{ ...commonOptions, title: "Mouvement" }}
+      />
+      <Stack.Screen
         name="goal-transfer"
         options={{ ...commonOptions, title: "Mouvement objectif" }}
       />

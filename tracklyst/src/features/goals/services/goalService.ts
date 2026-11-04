@@ -14,6 +14,15 @@ async function goalBudget(id: string) {
   return data.budget_id as string;
 }
 
+/** Plus retiré que versé : refusé par la base (« goal_negative »). */
+function goalMovementError(error: { message?: string }) {
+  return new Error(
+    error.message?.includes("goal_negative")
+      ? "Impossible : il y aurait plus d'argent retiré de cet objectif que versé."
+      : error.message || "Une erreur est survenue.",
+  );
+}
+
 export const goalService = {
   async getGoals(budgetId: string): Promise<Goal[]> {
     const { data, error } = await supabase
@@ -74,6 +83,39 @@ export const goalService = {
 
     if (error) throw error;
     return fieldCrypto.decryptOne("goals", budgetId, data as Goal);
+  },
+
+  /** Objectif à jour (montant épargné recalculé par la base, migration 00012). */
+  async getGoal(id: string): Promise<Goal> {
+    const { data, error } = await supabase
+      .from("goals")
+      .select(
+        `
+        *,
+        category:categories(id, name, icon, color)
+      `,
+      )
+      .eq("id", id)
+      .single();
+    if (error) throw error;
+    return fieldCrypto.decryptOne("goals", (data as Goal).budget_id, data as Goal);
+  },
+
+  /** Modifie un versement / retrait ; le montant épargné est recalculé par la base. */
+  async updateGoalTransaction(
+    tx: Pick<GoalTransaction, "id" | "budget_id">,
+    dto: { amount: number; description: string | null },
+  ): Promise<void> {
+    const { error } = await supabase
+      .from("goal_transactions")
+      .update(await fieldCrypto.encrypt("goal_transactions", tx.budget_id, dto))
+      .eq("id", tx.id);
+    if (error) throw goalMovementError(error);
+  },
+
+  async deleteGoalTransaction(id: string): Promise<void> {
+    const { error } = await supabase.from("goal_transactions").delete().eq("id", id);
+    if (error) throw goalMovementError(error);
   },
 
   async deleteGoal(id: string): Promise<void> {
