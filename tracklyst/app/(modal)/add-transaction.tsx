@@ -41,9 +41,9 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  useColorScheme,
   View,
 } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from '@expo/vector-icons/Ionicons';
 

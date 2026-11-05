@@ -8,8 +8,8 @@ import {
   View,
   ViewProps,
   ViewStyle,
-  useColorScheme,
 } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 
 interface CardProps extends ViewProps {
   style?: StyleProp<ViewStyle>;

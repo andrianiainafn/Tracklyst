@@ -1,6 +1,7 @@
 import { Colors } from "@/constants/theme";
 import React from "react";
-import { View, useColorScheme } from "react-native";
+import { View } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /**

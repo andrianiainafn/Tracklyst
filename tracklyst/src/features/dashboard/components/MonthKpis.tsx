@@ -3,7 +3,8 @@ import { Card } from "@/src/components/ui/Card";
 import { formatCurrencyCompact } from "@/src/utils/currency";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, Text, View, useColorScheme } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import type { MonthFlow } from "../hooks/useDashboardStats";
 
 function Kpi({

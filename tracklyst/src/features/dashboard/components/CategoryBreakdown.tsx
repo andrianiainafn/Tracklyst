@@ -3,7 +3,8 @@ import { Card } from "@/src/components/ui/Card";
 import { CategoryIcon } from "@/src/features/categories/components/CategoryIcon";
 import { formatCurrency } from "@/src/utils/currency";
 import React from "react";
-import { StyleSheet, Text, View, useColorScheme } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import type { CategoryTotal } from "../hooks/useDashboardStats";
 
 /**

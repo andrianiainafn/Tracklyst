@@ -8,8 +8,8 @@ import {
   TextInputProps,
   View,
   ViewStyle,
-  useColorScheme,
 } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 
 interface InputProps extends TextInputProps {
   label?: string;

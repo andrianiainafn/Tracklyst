@@ -1,7 +1,8 @@
 import { Colors } from "@/constants/theme";
 import { BlurView } from "expo-blur";
 import React from "react";
-import { StyleProp, StyleSheet, ViewStyle, useColorScheme } from "react-native";
+import { StyleProp, StyleSheet, ViewStyle } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 
 interface GlassSurfaceProps {
   children?: React.ReactNode;

@@ -11,9 +11,9 @@ import {
   type NativeSyntheticEvent,
   type ScrollViewProps,
   StyleSheet,
-  useColorScheme,
   View,
 } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const HEADER_HEIGHT = 250;

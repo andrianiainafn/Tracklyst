@@ -14,8 +14,8 @@ import {
   Text,
   TextInput,
   View,
-  useColorScheme,
 } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 
 export default function JoinBudgetModal() {
   const isDark = useColorScheme() === "dark";

@@ -1,7 +1,8 @@
 import { Colors, Radius } from "@/constants/theme";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { ComponentProps, useEffect, useRef } from "react";
-import { Modal, Platform, Pressable, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type IconName = ComponentProps<typeof MaterialCommunityIcons>["name"];

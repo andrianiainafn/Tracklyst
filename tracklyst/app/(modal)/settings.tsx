@@ -1,3 +1,4 @@
+import { ThemeModePicker } from "@/src/features/theme/ThemeModePicker";
 import { Colors } from "@/constants/theme";
 import { unregisterPushToken } from "@/src/features/notifications/services/localNotifications";
 import { IconSymbol } from "@/src/components/ui/icon-symbol";
@@ -14,7 +15,8 @@ import {
   setEnabled as setNotificationsEnabled,
 } from "@/src/features/notifications/services/localNotifications";
 import React, { useEffect, useState } from "react";
-import { Alert, Linking, ScrollView, StyleSheet, Switch, Text, useColorScheme, View } from "react-native";
+import { Alert, Linking, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 
 export default function Settings() {
   const isDark = useColorScheme() === "dark";
@@ -108,6 +110,9 @@ export default function Settings() {
           </View>
         </PressableCard>
       </View>
+
+      <Text style={[styles.sectionLabel, { color: c.textSubtle }]}>Apparence</Text>
+      <ThemeModePicker />
 
       <Text style={[styles.sectionLabel, { color: c.textSubtle }]}>Notifications</Text>
       <Card padding={14}>

@@ -18,8 +18,8 @@ import {
   Text,
   TextInput,
   View,
-  useColorScheme,
 } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Catégories suggérées en premier : celles qu'on plafonne le plus souvent.

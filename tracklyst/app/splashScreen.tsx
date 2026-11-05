@@ -9,8 +9,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
 

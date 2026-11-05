@@ -9,8 +9,8 @@ import {
   StyleSheet,
   Text,
   View,
-  useColorScheme,
 } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import type {
   CategorySpending,
   LimitStatus,

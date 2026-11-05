@@ -1,7 +1,8 @@
 import { Colors } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { StyleSheet, Text, View, useColorScheme } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { Button } from "./Button";
 
 interface EmptyStateProps {

@@ -17,8 +17,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useColorScheme,
 } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 
 type AuthMode = "password" | "magic-link";
 

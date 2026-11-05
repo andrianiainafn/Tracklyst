@@ -1,7 +1,8 @@
 import { Colors } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Pressable, StyleSheet, useColorScheme } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { usePrivacyStore } from "../store/privacyStore";
 
 /** Bouton œil : affiche / masque les soldes. */

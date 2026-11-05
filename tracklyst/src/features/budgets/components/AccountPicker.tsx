@@ -1,7 +1,8 @@
 import { Colors, Radius } from "@/constants/theme";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useMemo } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useColorScheme } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { ACCOUNT_KINDS, type AccountKind } from "../constants/accountLabels";
 import { providerFor } from "../constants/providers";
 

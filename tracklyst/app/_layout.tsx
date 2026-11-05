@@ -13,7 +13,8 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import * as Notifications from "expo-notifications";
-import { Linking, Platform, StyleSheet, View } from "react-native";
+import { Appearance, Linking, Platform, StyleSheet, View } from "react-native";
+import { useThemeStore } from "@/src/features/theme/themeStore";
 import { Colors } from "@/constants/theme";
 import { installWebAlert } from "@/src/utils/webAlert";
 
@@ -63,6 +64,19 @@ function NotificationTapHandlerNative() {
 // Pas de notifications dans la version web.
 const NotificationTapHandler = Platform.OS === "web" ? () => null : NotificationTapHandlerNative;
 
+/**
+ * Applique l'apparence choisie aux éléments natifs (barre d'état, fenêtres
+ * système, sélecteur de date). Le web suit useColorScheme directement.
+ */
+function NativeAppearanceSync() {
+  const mode = useThemeStore((s) => s.mode);
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    Appearance.setColorScheme(mode === "system" ? "unspecified" : mode);
+  }, [mode]);
+  return null;
+}
+
 function DeepLinkHandler() {
   const { setSession } = useAuthStore();
 
@@ -104,6 +118,7 @@ export default function RootLayout() {
         ]}
       >
       <View style={[styles.app, { backgroundColor: colorScheme === "dark" ? Colors.dark.bg : Colors.light.bg }]}>
+      <NativeAppearanceSync />
       <AuthGuard />
       <DeepLinkHandler />
       <NotificationTapHandler />
@@ -117,7 +132,7 @@ export default function RootLayout() {
       <EncryptionGate />
       </View>
       </View>
-      <StatusBar style="auto" />
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
     </ThemeProvider>
   );
 }

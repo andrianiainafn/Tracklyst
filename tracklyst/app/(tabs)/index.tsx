@@ -39,8 +39,8 @@ import {
   StyleSheet,
   Text,
   View,
-  useColorScheme,
 } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ─── Formatters ───────────────────────────────────────────────────────────────

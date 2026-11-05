@@ -9,8 +9,8 @@ import {
   TextStyle,
   View,
   ViewStyle,
-  useColorScheme,
 } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive";
 

@@ -9,8 +9,8 @@ import {
   StyleSheet,
   Text,
   View,
-  useColorScheme,
 } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { CategoryIcon } from "@/src/features/categories/components/CategoryIcon";
 import { iconForLabel } from "@/src/features/categories/constants/categoryIcons";
 import type { Subscription } from "../types/subscription.types";

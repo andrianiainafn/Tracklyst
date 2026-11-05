@@ -8,7 +8,8 @@ import {
   useNotifications,
 } from "@/src/features/notifications/hooks/useNotifications";
 import React from "react";
-import { ScrollView, StyleSheet, Text, useColorScheme, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 
 function NotificationCard({
   item,

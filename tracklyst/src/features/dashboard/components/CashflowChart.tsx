@@ -3,7 +3,8 @@ import { Card } from "@/src/components/ui/Card";
 import { formatCurrency, formatCurrencyCompact } from "@/src/utils/currency";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
-import { LayoutChangeEvent, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { LayoutChangeEvent, StyleSheet, Text, View } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import Svg, { G, Line, Path, Rect, Text as SvgText } from "react-native-svg";
 import type { MonthFlow } from "../hooks/useDashboardStats";
 

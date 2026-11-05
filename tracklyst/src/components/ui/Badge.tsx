@@ -1,6 +1,7 @@
 import { Colors } from "@/constants/theme";
 import React from "react";
-import { StyleSheet, Text, View, useColorScheme } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 
 export type BadgeTone = "neutral" | "accent" | "danger" | "warning" | "success";
 

@@ -2,7 +2,8 @@ import { Colors, Radius, Shadow } from "@/constants/theme";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Updates from "expo-updates";
 import React, { useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View, useColorScheme } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /**
