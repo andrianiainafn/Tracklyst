@@ -61,7 +61,7 @@ export default function ModalLayout() {
       />
       <Stack.Screen
         name="monthly-limits"
-        options={{ ...commonOptions, title: "Plafonds du mois" }}
+        options={{ ...commonOptions, title: "Plafonds" }}
       />
       <Stack.Screen
         name="subscriptions"

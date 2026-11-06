@@ -79,6 +79,7 @@ export const DEFAULT_CATEGORIES: {
   { name: "Loisirs", type: "expense", icon: "gamepad-variant-outline", color: "#EC4899" },
   { name: "Restaurant", type: "expense", icon: "silverware-fork-knife", color: "#F97316" },
   { name: "Santé", type: "expense", icon: "medical-bag", color: "#06B6D4" },
+  { name: "Cotisation familiale", type: "expense", icon: "account-group-outline", color: "#14B8A6" },
   { name: "Petites dépenses", type: "expense", icon: "receipt-text-outline", color: "#A855F7" },
   { name: "Autre dépense", type: "expense", icon: "dots-horizontal-circle-outline", color: "#64748B" },
 ];

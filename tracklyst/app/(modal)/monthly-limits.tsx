@@ -13,6 +13,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,7 +24,18 @@ import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Catégories suggérées en premier : celles qu'on plafonne le plus souvent.
-const SUGGESTED = ["essence", "abonnements", "petites dépenses", "courses", "restaurant", "loisirs"];
+const SUGGESTED = [
+  "essence",
+  "cotisation familiale",
+  "abonnements",
+  "petites dépenses",
+  "courses",
+  "restaurant",
+  "loisirs",
+];
+
+type Period = "month" | "week";
+const periodOf = (cat: Category): Period => (cat.limit_period === "week" ? "week" : "month");
 
 const suggestionRank = (cat: Category) => {
   const i = SUGGESTED.indexOf(cat.name.toLowerCase());
@@ -48,6 +60,7 @@ export default function MonthlyLimitsScreen() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [periods, setPeriods] = useState<Record<string, Period>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -63,6 +76,7 @@ export default function MonthlyLimitsScreen() {
           .sort((a, b) => suggestionRank(a) - suggestionRank(b));
         setCategories(expenses);
         setValues(Object.fromEntries(expenses.map((cat) => [cat.id, toInput(cat.monthly_limit)])));
+        setPeriods(Object.fromEntries(expenses.map((cat) => [cat.id, periodOf(cat)])));
       })
       .catch((e) => Alert.alert("Erreur", e?.message ?? "Impossible de charger les catégories."))
       .finally(() => setIsLoading(false));
@@ -71,22 +85,30 @@ export default function MonthlyLimitsScreen() {
   const changed = useMemo(
     () =>
       categories.filter(
-        (cat) => parseLimit(values[cat.id] ?? "") !== (cat.monthly_limit != null ? Number(cat.monthly_limit) : null),
+        (cat) =>
+          parseLimit(values[cat.id] ?? "") !== (cat.monthly_limit != null ? Number(cat.monthly_limit) : null) ||
+          (periods[cat.id] ?? "month") !== periodOf(cat),
       ),
-    [categories, values],
+    [categories, values, periods],
   );
 
-  const total = useMemo(
-    () => categories.reduce((acc, cat) => acc + (parseLimit(values[cat.id] ?? "") ?? 0), 0),
-    [categories, values],
-  );
+  const totalFor = (period: Period) =>
+    categories.reduce(
+      (acc, cat) => acc + ((periods[cat.id] ?? "month") === period ? (parseLimit(values[cat.id] ?? "") ?? 0) : 0),
+      0,
+    );
+  const total = totalFor("month");
+  const totalWeek = totalFor("week");
+  const fmt = (n: number) => new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n);
 
   const handleSave = async () => {
     if (changed.length === 0) return router.back();
     try {
       setIsSaving(true);
       const updated = await Promise.all(
-        changed.map((cat) => categoryService.updateMonthlyLimit(cat.id, parseLimit(values[cat.id] ?? ""))),
+        changed.map((cat) =>
+          categoryService.updateMonthlyLimit(cat.id, parseLimit(values[cat.id] ?? ""), periods[cat.id] ?? "month"),
+        ),
       );
       updated.forEach(updateCategory);
       router.back();
@@ -116,9 +138,9 @@ export default function MonthlyLimitsScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={[styles.intro, { color: c.textMuted }]}>
-          Indiquez combien vous voulez dépenser au maximum chaque mois pour{" "}
-          <Text style={{ fontWeight: "700", color: c.text }}>{activeBudget.name}</Text>.
-          Laissez vide pour ne pas plafonner.
+          Indiquez combien vous voulez dépenser au maximum pour{" "}
+          <Text style={{ fontWeight: "700", color: c.text }}>{activeBudget.name}</Text>, par mois ou par
+          semaine (du lundi au dimanche). Laissez vide pour ne pas plafonner.
         </Text>
 
         {isLoading ? (
@@ -141,9 +163,28 @@ export default function MonthlyLimitsScreen() {
                   ]}
                 >
                   <CategoryIcon category={cat} size={38} />
-                  <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>
-                    {cat.name}
-                  </Text>
+                  <View style={styles.nameCol}>
+                    <Text style={[styles.name, { color: c.text }]} numberOfLines={1}>
+                      {cat.name}
+                    </Text>
+                    <View style={[styles.periods, { backgroundColor: c.surfaceAlt }]}>
+                      {(["month", "week"] as const).map((p) => {
+                        const on = (periods[cat.id] ?? "month") === p;
+                        return (
+                          <Pressable
+                            key={p}
+                            onPress={() => setPeriods((v) => ({ ...v, [cat.id]: p }))}
+                            hitSlop={4}
+                            style={[styles.period, on && { backgroundColor: c.tint }]}
+                          >
+                            <Text style={[styles.periodText, { color: on ? "#fff" : c.textMuted }]}>
+                              {p === "month" ? "Mois" : "Semaine"}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
                   <View
                     style={[
                       styles.inputWrap,
@@ -171,9 +212,17 @@ export default function MonthlyLimitsScreen() {
         <View style={styles.totalRow}>
           <Text style={[styles.totalLabel, { color: c.textMuted }]}>Total plafonné / mois</Text>
           <Text style={[styles.totalValue, { color: c.text }]}>
-            {new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(total)} {currencySymbol}
+            {fmt(total)} {currencySymbol}
           </Text>
         </View>
+        {totalWeek > 0 && (
+          <View style={styles.totalRow}>
+            <Text style={[styles.totalLabel, { color: c.textMuted }]}>Total plafonné / semaine</Text>
+            <Text style={[styles.totalValue, { color: c.text }]}>
+              {fmt(totalWeek)} {currencySymbol}
+            </Text>
+          </View>
+        )}
         <Button
           label={changed.length > 0 ? "Enregistrer" : "Fermer"}
           onPress={handleSave}
@@ -196,7 +245,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  name: { flex: 1, fontSize: 14, fontWeight: "600" },
+  nameCol: { flex: 1, gap: 6 },
+  name: { fontSize: 14, fontWeight: "600" },
+  periods: { flexDirection: "row", alignSelf: "flex-start", borderRadius: Radius.pill, padding: 2 },
+  period: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill },
+  periodText: { fontSize: 11, fontWeight: "700" },
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",

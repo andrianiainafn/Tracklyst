@@ -80,6 +80,7 @@ function LimitRow({
             <Text style={{ color: c.textSubtle, fontWeight: "500" }}>
               {" / "}
               {money(item.limit, currency)}
+              {item.period === "week" ? " / sem." : ""}
             </Text>
           </Text>
         </View>
@@ -88,6 +89,7 @@ function LimitRow({
           {item.status === "over"
             ? `Dépassé de ${money(-item.remaining, currency)}`
             : `Reste ${money(item.remaining, currency)}`}
+          {item.period === "week" ? " cette semaine" : ""}
         </Text>
       </View>
     </Pressable>
@@ -114,7 +116,7 @@ export function MonthlyLimitsCard({
   const c = isDark ? Colors.dark : Colors.light;
 
   const hasLimits = !!data && data.limited.length > 0;
-  const totalRatio = hasLimits ? data.totalLimitedSpent / data.totalLimit : 0;
+  const totalRatio = hasLimits && data.totalLimit > 0 ? data.totalLimitedSpent / data.totalLimit : 0;
   const totalStatus: LimitStatus =
     totalRatio > 1 ? "over" : totalRatio >= 0.8 ? "warning" : "ok";
   const daysLeft = daysLeftInMonth();
@@ -162,7 +164,7 @@ export function MonthlyLimitsCard({
             ))}
           </View>
           <Text style={[styles.emptyTitle, { color: c.text }]}>
-            Fixez vos plafonds du mois
+            Fixez vos plafonds (mois ou semaine)
           </Text>
           <Text style={[styles.emptyText, { color: c.textMuted }]}>
             Essence, abonnements, petites dépenses… voyez d'un coup d'œil ce
@@ -171,7 +173,8 @@ export function MonthlyLimitsCard({
         </Pressable>
       ) : (
         <>
-          {/* Total */}
+          {/* Total des plafonds mensuels */}
+          {data.totalLimit > 0 && (
           <View style={[styles.total, { backgroundColor: c.surfaceAlt }]}>
             <View style={styles.rowTop}>
               <Text style={[styles.totalLabel, { color: c.textMuted }]}>
@@ -187,6 +190,7 @@ export function MonthlyLimitsCard({
             </View>
             <Bar ratio={totalRatio} color={statusColor(totalStatus, c)} c={c} />
           </View>
+          )}
 
           <View style={styles.rows}>
             {data.limited.map((item) => (

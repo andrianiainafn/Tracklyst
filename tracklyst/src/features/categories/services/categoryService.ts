@@ -32,10 +32,11 @@ export const categoryService = {
   async updateMonthlyLimit(
     id: string,
     monthlyLimit: number | null,
+    period: "month" | "week" = "month",
   ): Promise<Category> {
     const { data, error } = await supabase
       .from("categories")
-      .update({ monthly_limit: monthlyLimit })
+      .update({ monthly_limit: monthlyLimit, limit_period: period })
       .eq("id", id)
       .select()
       .single();

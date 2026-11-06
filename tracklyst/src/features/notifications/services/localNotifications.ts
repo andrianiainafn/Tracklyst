@@ -238,11 +238,14 @@ export async function notifyLimitAlerts(items: CategorySpending[], currency: str
   if (!(await canNotify())) return;
   const now = new Date();
   const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  // Plafond par semaine : une alerte par semaine (clé = lundi de la semaine).
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+  const week = `w${monday.getFullYear()}-${monday.getMonth() + 1}-${monday.getDate()}`;
 
   for (const item of items) {
     const level = LEVEL[item.status];
     if (level === 0) continue;
-    const key = `notifications:limit:${item.category.id}:${month}`;
+    const key = `notifications:limit:${item.category.id}:${item.period === "week" ? week : month}`;
     const already = Number((await AsyncStorage.getItem(key)) ?? 0);
     if (level <= already) continue;
     await AsyncStorage.setItem(key, String(level));
@@ -253,7 +256,7 @@ export async function notifyLimitAlerts(items: CategorySpending[], currency: str
       content: {
         title: over ? `Plafond ${name} dépassé` : `${name} : ${Math.round(item.ratio * 100)} % du plafond`,
         body: over
-          ? `Dépassé de ${formatCurrency(Math.round(-item.remaining), currency)} ce mois-ci.`
+          ? `Dépassé de ${formatCurrency(Math.round(-item.remaining), currency)} ${item.period === "week" ? "cette semaine" : "ce mois-ci"}.`
           : `Il vous reste ${formatCurrency(Math.round(item.remaining), currency)} sur ${formatCurrency(Math.round(item.limit), currency)}.`,
         data: { url: "/(tabs)" },
       },

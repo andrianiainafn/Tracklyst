@@ -28,24 +28,32 @@ Deno.serve(async (req) => {
 
   const { data: cat } = await sb
     .from("categories")
-    .select("id, name, monthly_limit")
+    .select("id, name, monthly_limit, limit_period")
     .eq("id", tx.category_id)
     .single();
   const limit = Number(cat?.monthly_limit ?? 0);
   if (!cat || limit <= 0) return json({ skipped: "no limit" });
 
-  // Dépenses du mois de la transaction dans cette catégorie.
+  // Dépenses de la période (mois, ou semaine lundi → dimanche) de la transaction.
+  const weekly = cat.limit_period === "week";
   const month = tx.date.slice(0, 7);
-  const [y, m] = month.split("-").map(Number);
+  const [y, m, d] = tx.date.split("-").map(Number);
   const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const iso = (t: Date) => t.toISOString().slice(0, 10);
+  const day = new Date(Date.UTC(y, m - 1, d));
+  const monday = new Date(Date.UTC(y, m - 1, d - ((day.getUTCDay() + 6) % 7)));
+  const sunday = new Date(Date.UTC(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate() + 6));
+  const from = weekly ? iso(monday) : `${month}-01`;
+  const to = weekly ? iso(sunday) : `${month}-${String(lastDay).padStart(2, "0")}`;
+  const when = weekly ? "cette semaine" : "ce mois-ci";
   const { data: rows, error } = await sb
     .from("transactions")
     .select("amount")
     .eq("budget_id", tx.budget_id)
     .eq("category_id", cat.id)
     .eq("type", "expense")
-    .gte("date", `${month}-01`)
-    .lte("date", `${month}-${String(lastDay).padStart(2, "0")}`);
+    .gte("date", from)
+    .lte("date", to);
   if (error) return json({ error: error.message }, 500);
 
   const spent = (rows ?? []).reduce((acc, r) => acc + Number(r.amount), 0);
@@ -54,7 +62,7 @@ Deno.serve(async (req) => {
 
   const over = ratio > 1;
   const level = over ? "over" : "warning";
-  const base = `limit:${cat.id}:${month}`;
+  const base = `limit:${cat.id}:${weekly ? `w${iso(monday)}` : month}`;
   if (!(await claim(sb, `${base}:${level}`))) return json({ skipped: "already sent" });
   // Dépassement direct : pas d'alerte « 80 % » ensuite pour ce mois.
   if (over) await claim(sb, `${base}:warning`);
@@ -66,7 +74,7 @@ Deno.serve(async (req) => {
       to,
       title: over ? `Plafond ${cat.name} dépassé` : `${cat.name} : ${Math.round(ratio * 100)} % du plafond`,
       body: over
-        ? `Dépassé de ${formatAmount(spent - limit, currency)} ce mois-ci.`
+        ? `Dépassé de ${formatAmount(spent - limit, currency)} ${when}.`
         : `Il vous reste ${formatAmount(limit - spent, currency)} sur ${formatAmount(limit, currency)}.`,
       data: { url: "/(tabs)" },
     })),

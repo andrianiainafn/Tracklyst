@@ -15,6 +15,8 @@ export interface CategorySpending {
   /** Ratio dépensé / plafond (peut dépasser 1). */
   ratio: number;
   status: LimitStatus;
+  /** Plafond du mois ou de la semaine en cours. */
+  period: "month" | "week";
 }
 
 export interface MonthlySpending {
@@ -22,6 +24,7 @@ export interface MonthlySpending {
   limited: CategorySpending[];
   /** Dépenses du mois dans des catégories sans plafond. */
   unlimitedSpent: number;
+  /** Totaux des plafonds mensuels uniquement. */
   totalLimit: number;
   totalLimitedSpent: number;
   /** Épargne nette du mois : dépôts − retraits sur les objectifs. */
@@ -40,31 +43,47 @@ export function currentMonthRange(now = new Date()) {
   return { start: toISODate(start), end: toISODate(end) };
 }
 
+/** Semaine en cours, du lundi au dimanche. */
+export function currentWeekRange(now = new Date()) {
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+  const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+  return { start: toISODate(start), end: toISODate(end) };
+}
+
 export function computeMonthlySpending(
   categories: Category[],
-  expenses: { category_id: string; amount: number }[],
+  expenses: { category_id: string; amount: number; date?: string }[],
   savings: { type: "deposit" | "withdrawal"; amount: number }[] = [],
+  now = new Date(),
 ): MonthlySpending {
-  const spentByCategory = new Map<string, number>();
-  for (const tx of expenses) {
-    spentByCategory.set(
-      tx.category_id,
-      (spentByCategory.get(tx.category_id) ?? 0) + Number(tx.amount),
-    );
-  }
+  const month = currentMonthRange(now);
+  const week = currentWeekRange(now);
+  const inRange = (d: string | undefined, r: { start: string; end: string }) => !d || (d >= r.start && d <= r.end);
+  const sumBy = (r: { start: string; end: string }) => {
+    const map = new Map<string, number>();
+    for (const tx of expenses) {
+      if (!inRange(tx.date, r)) continue;
+      map.set(tx.category_id, (map.get(tx.category_id) ?? 0) + Number(tx.amount));
+    }
+    return map;
+  };
+  const spentByCategory = sumBy(month);
+  const spentThisWeek = sumBy(week);
 
   const limited: CategorySpending[] = [];
   let unlimitedSpent = 0;
 
   for (const category of categories) {
     if (category.type !== "expense") continue;
-    const spent = spentByCategory.get(category.id) ?? 0;
+    const monthSpent = spentByCategory.get(category.id) ?? 0;
     const limit = Number(category.monthly_limit ?? 0);
 
     if (limit <= 0) {
-      unlimitedSpent += spent;
+      unlimitedSpent += monthSpent;
       continue;
     }
+    const period = category.limit_period === "week" ? "week" : "month";
+    const spent = period === "week" ? (spentThisWeek.get(category.id) ?? 0) : monthSpent;
 
     const ratio = spent / limit;
     limited.push({
@@ -74,16 +93,18 @@ export function computeMonthlySpending(
       remaining: limit - spent,
       ratio,
       status: ratio > 1 ? "over" : ratio >= WARNING_RATIO ? "warning" : "ok",
+      period,
     });
   }
 
   limited.sort((a, b) => b.ratio - a.ratio);
+  const monthly = limited.filter((l) => l.period === "month");
 
   return {
     limited,
     unlimitedSpent,
-    totalLimit: limited.reduce((acc, l) => acc + l.limit, 0),
-    totalLimitedSpent: limited.reduce((acc, l) => acc + l.spent, 0),
+    totalLimit: monthly.reduce((acc, l) => acc + l.limit, 0),
+    totalLimitedSpent: monthly.reduce((acc, l) => acc + l.spent, 0),
     saved: savings.reduce(
       (acc, s) => acc + (s.type === "deposit" ? 1 : -1) * Number(s.amount),
       0,
@@ -107,9 +128,15 @@ export const useMonthlySpending = (budgetId?: string) => {
     try {
       setIsLoading(true);
       const { start, end } = currentMonthRange();
+      // La semaine en cours peut commencer le mois précédent ou finir le suivant.
+      const week = currentWeekRange();
       const [categories, transactions, savings] = await Promise.all([
         categoryService.getCategories(budgetId),
-        transactionService.getTransactionsByDateRange(budgetId, start, end),
+        transactionService.getTransactionsByDateRange(
+          budgetId,
+          week.start < start ? week.start : start,
+          week.end > end ? week.end : end,
+        ),
         goalService.getGoalTransactionsByDateRange(budgetId, start, end),
       ]);
       setData(

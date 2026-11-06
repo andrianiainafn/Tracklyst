@@ -148,7 +148,8 @@ export default function CategoriesScreen() {
                     </Text>
                     {cat.monthly_limit != null && Number(cat.monthly_limit) > 0 && (
                       <Text style={[styles.meta, { color: c.textSubtle }]}>
-                        Plafond {formatCurrency(Number(cat.monthly_limit), activeBudget.currency)} / mois
+                        Plafond {formatCurrency(Number(cat.monthly_limit), activeBudget.currency)} /{" "}
+                        {cat.limit_period === "week" ? "semaine" : "mois"}
                       </Text>
                     )}
                   </View>

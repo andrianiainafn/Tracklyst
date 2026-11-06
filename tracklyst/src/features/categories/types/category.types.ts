@@ -1,3 +1,5 @@
+export type LimitPeriod = "month" | "week";
+
 export interface Category {
   id: string;
   budget_id: string;
@@ -7,6 +9,8 @@ export interface Category {
   color: string | null;
   /** Plafond de dépense par mois. null = pas de plafond. */
   monthly_limit: number | null;
+  /** Période du plafond : par mois (défaut) ou par semaine, du lundi au dimanche. */
+  limit_period?: LimitPeriod | null;
   created_at: string;
   updated_at: string;
 }

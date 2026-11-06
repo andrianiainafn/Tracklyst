@@ -45,6 +45,7 @@ const KEYWORDS: [RegExp, CategoryIconName][] = [
   [/sport|gym|salle/, "dumbbell"],
   [/cloud|icloud|drive|stockage/, "cloud-outline"],
   [/abonnement/, "autorenew"],
+  [/cotisation|famil/, "account-group-outline"],
   [/petite|divers|menu/, "receipt-text-outline"],
   [/course|supermarch|march[ée]|alimenta/, "cart-outline"],
   [/loyer|maison|logement/, "home-outline"],
