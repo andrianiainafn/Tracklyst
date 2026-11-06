@@ -32,6 +32,21 @@ export const accountService = {
     );
   },
 
+  /** Argent des objectifs rangé sur chaque compte (versements − retraits). */
+  async getSavings(budgetId: string): Promise<Record<string, number>> {
+    const { data, error } = await supabase
+      .from("goal_transactions")
+      .select("account_id, type, amount")
+      .eq("budget_id", budgetId)
+      .not("account_id", "is", null);
+    if (error) throw error;
+    const out: Record<string, number> = {};
+    for (const g of (data ?? []) as { account_id: string; type: string; amount: number }[]) {
+      out[g.account_id] = (out[g.account_id] ?? 0) + (g.type === "deposit" ? 1 : -1) * Number(g.amount);
+    }
+    return out;
+  },
+
   async createAccount(input: { budget_id: string; kind: string; name: string | null; initial_amount: number }) {
     const { error } = await supabase
       .from("budget_accounts")

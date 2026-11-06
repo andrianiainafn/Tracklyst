@@ -32,14 +32,16 @@ export default function AccountFormModal() {
   const { bottom } = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { activeBudget } = useActiveBudget();
-  const { accounts, balances, load } = useAccountStore();
+  const { accounts, balances, savings, load } = useAccountStore();
   const existing = id ? accounts.find((a) => a.id === id) : undefined;
   const currency = activeBudget?.currency ?? "MGA";
 
   const [kind, setKind] = useState<AccountKind | null>((existing?.kind as AccountKind) ?? null);
   const [name, setName] = useState(existing?.name ?? "");
   // Solde actuel saisi (ce que montre MVola, le relevé bancaire…).
-  const shownBalance = existing ? Math.round(balances[existing.id] ?? 0) : 0;
+  // Total réel du compte, épargne des objectifs comprise.
+  const saved = existing ? (savings[existing.id] ?? 0) : 0;
+  const shownBalance = existing ? Math.round((balances[existing.id] ?? 0) + saved) : 0;
   const [balanceRaw, setBalanceRaw] = useState(existing ? String(shownBalance) : "");
   const desired = parse(balanceRaw);
   const balanceChanged = !!existing && balanceRaw.trim() !== "" && desired !== shownBalance;
@@ -75,8 +77,11 @@ export default function AccountFormModal() {
       if (!balanceChanged) return accountService.updateAccount(existing, base);
       // Nouveau solde : on corrige le solde de départ de l'écart, calculé sur le solde le plus récent
       // (aucune fausse dépense ni faux revenu dans les statistiques).
-      const fresh = await accountService.getBalances(activeBudget.id);
-      const gap = desired - (fresh[existing.id] ?? 0);
+      const [fresh, freshSavings] = await Promise.all([
+        accountService.getBalances(activeBudget.id),
+        accountService.getSavings(activeBudget.id),
+      ]);
+      const gap = desired - ((fresh[existing.id] ?? 0) + (freshSavings[existing.id] ?? 0));
       return accountService.updateAccount(existing, { ...base, initial_amount: Number(existing.initial_amount) + gap });
     });
   };
@@ -117,7 +122,9 @@ export default function AccountFormModal() {
         />
         <Text style={[styles.hint, { color: c.textSubtle }]}>
           {existing
-            ? "Corrigez-le si le montant réel diffère (solde affiché par MVola, votre relevé…). Le total du budget suit ; vos dépenses et revenus ne changent pas."
+            ? (saved > 0
+                ? `Épargne des objectifs comprise (${formatCurrency(Math.round(saved), currency)}). `
+                : "") + "Corrigez-le si le montant réel diffère (solde affiché par MVola, votre relevé…). Le total du budget suit ; vos dépenses et revenus ne changent pas."
             : "L'argent présent sur ce compte aujourd'hui (0 si vous allez y transférer de l'argent)."}
         </Text>
         {balanceChanged && (

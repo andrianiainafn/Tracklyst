@@ -39,7 +39,7 @@ export default function AccountsModal() {
   const router = useRouter();
   const { bottom } = useSafeAreaInsets();
   const { activeBudget, balance } = useActiveBudget();
-  const { accounts, balances, load } = useAccountStore();
+  const { accounts, balances, savings, load } = useAccountStore();
   const goals = useGoalStore((s) => s.goals);
   const hidden = usePrivacyStore((s) => s.hidden);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
@@ -94,7 +94,7 @@ export default function AccountsModal() {
         </Pressable>
       </View>
 
-      <Text style={[styles.section, { color: c.textSubtle }]}>MES COMPTES</Text>
+      <Text style={[styles.section, { color: c.textSubtle }]}>MES COMPTES · TOTAL AVEC ÉPARGNE</Text>
       {active.length === 0 ? (
         <Text style={[styles.empty, { color: c.textMuted }]}>
           Aucun compte. Ajoutez où se trouve votre argent : MVola, banque, espèces…
@@ -109,11 +109,18 @@ export default function AccountsModal() {
               onPress={() => router.push({ pathname: "/(modal)/account-form", params: { id: a.id } } as any)}
             >
               <AccountIcon account={a} size={40} />
-              <Text numberOfLines={1} style={[styles.name, { color: c.text }]}>
-                {accountName(a)}
-              </Text>
+              <View style={styles.nameCol}>
+                <Text numberOfLines={1} style={[styles.name, { flex: 0, color: c.text }]}>
+                  {accountName(a)}
+                </Text>
+                {(savings[a.id] ?? 0) > 0 && (
+                  <Text style={[styles.detail, { color: c.textSubtle }]}>
+                    {show(balances[a.id] ?? 0)} disponible · {show(savings[a.id] ?? 0)} en épargne
+                  </Text>
+                )}
+              </View>
               <Text style={[styles.amount, { color: (balances[a.id] ?? 0) < 0 ? c.danger : c.text }]}>
-                {show(balances[a.id] ?? 0)}
+                {show((balances[a.id] ?? 0) + (savings[a.id] ?? 0))}
               </Text>
               <MaterialCommunityIcons name="chevron-right" size={20} color={c.textSubtle} />
             </Row>
@@ -145,7 +152,7 @@ export default function AccountsModal() {
                 <Text numberOfLines={1} style={[styles.name, { color: c.text }]}>
                   {accountName(a)}
                 </Text>
-                <Text style={[styles.amount, { color: c.text }]}>{show(balances[a.id] ?? 0)}</Text>
+                <Text style={[styles.amount, { color: c.text }]}>{show((balances[a.id] ?? 0) + (savings[a.id] ?? 0))}</Text>
               </Row>
             ))}
           </Card>
@@ -208,6 +215,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
   name: { flex: 1, fontSize: 15, fontWeight: "700" },
   amount: { fontSize: 15, fontWeight: "800" },
+  nameCol: { flex: 1, gap: 2 },
+  detail: { fontSize: 12 },
   unknown: { width: 40, height: 40, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   pair: { flexDirection: "row", alignItems: "center", gap: 3 },
   small: { fontSize: 13, fontWeight: "600" },

@@ -278,7 +278,7 @@ export default function HomeScreen() {
             {/* Répartition sur les comptes */}
             <View style={[styles.split, { borderTopColor: c.border }]}>
               <View style={styles.splitHeader}>
-                <Text style={[styles.balanceLabel, { color: c.textSubtle }]}>RÉPARTITION</Text>
+                <Text style={[styles.balanceLabel, { color: c.textSubtle }]}>DISPONIBLE PAR COMPTE</Text>
                 <View style={styles.splitLinks}>
                   {activeAccounts.length > 1 && (
                     <Pressable onPress={() => router.push("/(modal)/transfer" as any)} hitSlop={6} style={styles.splitLink}>
@@ -287,7 +287,7 @@ export default function HomeScreen() {
                     </Pressable>
                   )}
                   <Pressable onPress={() => router.push("/(modal)/accounts" as any)} hitSlop={6}>
-                    <Text style={[styles.splitLinkText, { color: c.tint }]}>Comptes</Text>
+                    <Text style={[styles.splitLinkText, { color: c.tint }]}>Tout voir</Text>
                   </Pressable>
                 </View>
               </View>
@@ -303,7 +303,7 @@ export default function HomeScreen() {
                   {activeAccounts.map((a) => (
                     <Pressable
                       key={a.id}
-                      onPress={() => router.push({ pathname: "/(modal)/account-form", params: { id: a.id } } as any)}
+                      onPress={() => router.push("/(modal)/accounts" as any)}
                       style={({ pressed }) => [styles.splitChip, { backgroundColor: c.surfaceAlt }, pressed && { opacity: 0.7 }]}
                     >
                       <AccountIcon account={a} size={28} />
