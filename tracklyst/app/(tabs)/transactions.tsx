@@ -3,21 +3,21 @@ import { StatusBarScrim } from "@/src/components/ui/StatusBarScrim";
 import { IconSymbol } from "@/src/components/ui/icon-symbol";
 import { Card } from "@/src/components/ui/Card";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { accountName } from "@/src/features/accounts/components/AccountIcon";
+import { useAccountStore } from "@/src/features/accounts/store/accountStore";
+import type { Account } from "@/src/features/accounts/types";
 import { useBudgetStore } from "@/src/features/budgets/store/budgetStore";
 import { CategoryIcon } from "@/src/features/categories/components/CategoryIcon";
 import { useNotifications } from "@/src/features/notifications/hooks/useNotifications";
-import { useDeleteTransaction } from "@/src/features/transaction/hooks/useDeleteTransaction";
 import { useTransactions } from "@/src/features/transaction/hooks/useTransactions";
 import { Transaction } from "@/src/features/transaction/types/transaction.types";
 import { formatCurrency } from "@/src/utils/currency";
 import { formatDate } from "@/src/utils/date";
-import { getErrorMessage } from "@/src/utils/errors";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -32,6 +32,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type Filter = "all" | "income" | "expense";
+type View_ = "list" | "category";
 type Palette = typeof Colors.light;
 
 const FILTERS: { label: string; value: Filter }[] = [
@@ -206,18 +207,25 @@ function FilterTabs({
 // ─── Transaction row ──────────────────────────────────────────────────────────
 function TransactionRow({
   item,
+  account,
   currency,
   onPress,
   c,
 }: {
   item: Transaction;
+  account?: Account;
   currency?: string;
   onPress: () => void;
   c: Palette;
 }) {
   const isIncome = item.type === "income";
   const label = item.description || item.category?.name || "Transaction";
-  const sub = item.description && item.category?.name ? item.category.name : formatDate(item.date, { short: true });
+  const sub = [
+    item.description && item.category?.name ? item.category.name : formatDate(item.date, { short: true }),
+    account ? accountName(account) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && { backgroundColor: c.surfaceAlt }]}>
@@ -243,6 +251,65 @@ function TransactionRow({
   );
 }
 
+// ─── Vue par catégorie ────────────────────────────────────────────────────────
+type CategoryTotal = {
+  id: string;
+  category: Transaction["category"];
+  type: Transaction["type"];
+  total: number;
+  count: number;
+};
+
+function CategoryBreakdown({
+  rows,
+  currency,
+  onPick,
+  c,
+}: {
+  rows: CategoryTotal[];
+  currency?: string;
+  onPick: (row: CategoryTotal) => void;
+  c: Palette;
+}) {
+  const sum = rows.reduce((a, r) => a + r.total, 0);
+  return (
+    <Card padding={0} style={styles.dayCard}>
+      {rows.map((r, i) => {
+        const share = sum > 0 ? r.total / sum : 0;
+        const color = r.category?.color || (r.type === "income" ? c.chartIncome : c.chartExpense);
+        return (
+          <React.Fragment key={r.id}>
+            {i > 0 && <View style={[styles.separator, { backgroundColor: c.border }]} />}
+            <Pressable
+              onPress={() => onPick(r)}
+              style={({ pressed }) => [styles.row, pressed && { backgroundColor: c.surfaceAlt }]}
+            >
+              <CategoryIcon category={{ ...r.category, type: r.type }} size={40} />
+              <View style={styles.rowBody}>
+                <View style={styles.catTop}>
+                  <Text style={[styles.rowName, { color: c.text, flex: 1 }]} numberOfLines={1}>
+                    {r.category?.name ?? "Sans catégorie"}
+                  </Text>
+                  <Text style={[styles.rowAmount, { color: c.text }]}>
+                    {formatCurrency(Math.round(r.total), currency)}
+                  </Text>
+                </View>
+                <View style={[styles.meterTrack, { backgroundColor: c.surfaceAlt }]}>
+                  <View style={[styles.meterFill, { width: `${Math.max(share * 100, 2)}%` as any, backgroundColor: color }]} />
+                </View>
+                <Text style={[styles.rowSub, { color: c.textSubtle }]}>
+                  {Math.round(share * 100)} % · {r.count} opération{r.count > 1 ? "s" : ""}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={c.textSubtle} />
+            </Pressable>
+          </React.Fragment>
+        );
+      })}
+    </Card>
+  );
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function TransactionsScreen() {
   const isDark = useColorScheme() === "dark";
@@ -253,8 +320,21 @@ export default function TransactionsScreen() {
   const { transactions, isLoading, error, refresh } = useTransactions();
   const { activeBudget } = useBudgetStore();
   const { notifications } = useNotifications();
-  const { deleteTransaction } = useDeleteTransaction();
   const [filter, setFilter] = useState<Filter>("all");
+  const [view, setView] = useState<View_>("list");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryTotal | null>(null);
+  const accountsBudgetId = useAccountStore((st) => st.budgetId);
+  const allAccounts = useAccountStore((st) => st.accounts);
+  const accountsById = useMemo(
+    () => new Map((accountsBudgetId === activeBudget?.id ? allAccounts : []).map((a) => [a.id, a])),
+    [allAccounts, accountsBudgetId, activeBudget?.id],
+  );
+  const budgetId = activeBudget?.id;
+  useFocusEffect(
+    useCallback(() => {
+      if (budgetId) useAccountStore.getState().load(budgetId).catch(() => {});
+    }, [budgetId]),
+  );
   const [query, setQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [month, setMonth] = useState(() => {
@@ -269,51 +349,25 @@ export default function TransactionsScreen() {
   const shiftMonth = (delta: number) =>
     setMonth((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1));
 
-  const confirmDelete = useCallback(
-    (id: string) => {
-      Alert.alert("Supprimer la transaction", "Cette action est irréversible.", [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Supprimer",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteTransaction(id);
-            } catch (err) {
-              Alert.alert("Erreur", getErrorMessage(err, "Impossible de supprimer la transaction."));
-            }
-          },
-        },
-      ]);
-    },
-    [deleteTransaction],
-  );
-
+  // Un appui ouvre directement la modification (compte, catégorie, montant…) ;
+  // la suppression se fait depuis cet écran.
   const handleTransactionPress = useCallback(
     (item: Transaction) => {
-      Alert.alert(item.description || item.category?.name || "Transaction", undefined, [
-        {
-          text: "Modifier",
-          onPress: () =>
-            router.push({
-              pathname: "/(modal)/add-transaction",
-              params: {
-                id: item.id,
-                type: item.type,
-                amount: String(item.amount),
-                category_id: item.category_id,
-                description: item.description ?? "",
-                date: item.date,
-                budget_id: item.budget_id,
-                account_id: item.account_id ?? "",
-              },
-            } as any),
+      router.push({
+        pathname: "/(modal)/add-transaction",
+        params: {
+          id: item.id,
+          type: item.type,
+          amount: String(item.amount),
+          category_id: item.category_id,
+          description: item.description ?? "",
+          date: item.date,
+          budget_id: item.budget_id,
+          account_id: item.account_id ?? "",
         },
-        { text: "Supprimer", style: "destructive", onPress: () => confirmDelete(item.id) },
-        { text: "Annuler", style: "cancel" },
-      ]);
+      } as any);
     },
-    [router, confirmDelete],
+    [router],
   );
 
   const monthTransactions = useMemo(
@@ -336,6 +390,7 @@ export default function TransactionsScreen() {
     const filtered = monthTransactions.filter(
       (t) =>
         (filter === "all" || t.type === filter) &&
+        (!categoryFilter || (t.category_id === categoryFilter.id && t.type === categoryFilter.type)) &&
         (!q ||
           t.description?.toLowerCase().includes(q) ||
           t.category?.name?.toLowerCase().includes(q)),
@@ -350,7 +405,21 @@ export default function TransactionsScreen() {
         items,
         net: items.reduce((acc, t) => acc + (t.type === "income" ? 1 : -1) * Number(t.amount), 0),
       }));
-  }, [monthTransactions, filter, query]);
+  }, [monthTransactions, filter, query, categoryFilter]);
+
+  // Totaux par catégorie du mois (dépenses par défaut, revenus si ce filtre est choisi).
+  const categoryType: Transaction["type"] = filter === "income" ? "income" : "expense";
+  const byCategory = useMemo(() => {
+    const map = new Map<string, CategoryTotal>();
+    for (const t of monthTransactions) {
+      if (t.type !== categoryType) continue;
+      const row = map.get(t.category_id) ?? { id: t.category_id, category: t.category, type: t.type, total: 0, count: 0 };
+      row.total += Number(t.amount);
+      row.count += 1;
+      map.set(t.category_id, row);
+    }
+    return [...map.values()].sort((a, b) => b.total - a.total);
+  }, [monthTransactions, categoryType]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -417,8 +486,64 @@ export default function TransactionsScreen() {
         </View>
         <FilterTabs active={filter} onChange={setFilter} c={c} />
 
-        {/* List */}
-        {isLoading && transactions.length === 0 ? (
+        {/* Liste ou totaux par catégorie */}
+        <View style={styles.viewRow}>
+          {(
+            [
+              { id: "list", label: "Liste", icon: "list" },
+              { id: "category", label: "Par catégorie", icon: "pie-chart-outline" },
+            ] as const
+          ).map((v) => {
+            const on = view === v.id;
+            return (
+              <Pressable
+                key={v.id}
+                onPress={() => setView(v.id)}
+                style={[styles.viewChip, { backgroundColor: on ? c.tint : c.surfaceAlt }]}
+              >
+                <Ionicons name={v.icon} size={14} color={on ? "#fff" : c.textMuted} />
+                <Text style={[styles.viewChipText, { color: on ? "#fff" : c.textMuted }]}>{v.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {view === "list" && categoryFilter && (
+          <Pressable
+            onPress={() => setCategoryFilter(null)}
+            style={[styles.activeFilter, { backgroundColor: c.tintMuted }]}
+          >
+            <Text style={[styles.viewChipText, { color: c.text, flex: 1 }]} numberOfLines={1}>
+              Catégorie : {categoryFilter.category?.name ?? "Sans catégorie"}
+            </Text>
+            <Ionicons name="close-circle" size={16} color={c.textMuted} />
+          </Pressable>
+        )}
+
+        {view === "category" ? (
+          byCategory.length === 0 ? (
+            <EmptyState
+              icon="pie-chart-outline"
+              title={`Aucune ${categoryType === "income" ? "rentrée" : "dépense"} en ${monthName}`}
+              subtitle="Les totaux par catégorie apparaîtront ici."
+            />
+          ) : (
+            <>
+              <Text style={[styles.dayLabel, { color: c.textMuted, paddingHorizontal: 4 }]}>
+                {categoryType === "income" ? "Revenus" : "Dépenses"} par catégorie · du plus gros au plus petit
+              </Text>
+              <CategoryBreakdown
+                rows={byCategory}
+                currency={currency}
+                c={c}
+                onPick={(row) => {
+                  setCategoryFilter(row);
+                  setView("list");
+                }}
+              />
+            </>
+          )
+        ) : isLoading && transactions.length === 0 ? (
           <View style={styles.loadingWrap}>
             <ActivityIndicator color={c.tint} size="large" />
           </View>
@@ -446,6 +571,7 @@ export default function TransactionsScreen() {
                     {i > 0 && <View style={[styles.separator, { backgroundColor: c.border }]} />}
                     <TransactionRow
                       item={item}
+                      account={item.account_id ? accountsById.get(item.account_id) : undefined}
                       currency={currency}
                       onPress={() => handleTransactionPress(item)}
                       c={c}
@@ -547,6 +673,26 @@ const styles = StyleSheet.create({
   rowSubLine: { flexDirection: "row", alignItems: "center", gap: 4 },
   rowSub: { fontSize: 12, flexShrink: 1 },
   rowAmount: { fontSize: 14, fontWeight: "700", letterSpacing: -0.3 },
+
+  viewRow: { flexDirection: "row", gap: 8 },
+  viewChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: Radius.pill,
+  },
+  viewChipText: { fontSize: 13, fontWeight: "600" },
+  activeFilter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: Radius.md,
+  },
+  catTop: { flexDirection: "row", alignItems: "center", gap: 8 },
 
   loadingWrap: { paddingVertical: 60, alignItems: "center" },
 

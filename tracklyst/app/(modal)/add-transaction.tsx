@@ -21,6 +21,7 @@ import type { Budget } from "@/src/features/budgets/types/budget.types";
 import { useCategories } from "@/src/features/categories/hooks/useCategories";
 import { useAddTransaction } from "@/src/features/transaction/hooks/useAddTransaction";
 import { useUpdateTransaction } from "@/src/features/transaction/hooks/useUpdateTransaction";
+import { useDeleteTransaction } from "@/src/features/transaction/hooks/useDeleteTransaction";
 import { formatAmount, formatCurrency, getCurrencySymbol } from "@/src/utils/currency";
 import { todayISO } from "@/src/utils/date";
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
@@ -372,6 +373,28 @@ export default function AddTransaction() {
     accountId,
   ]);
 
+  const { deleteTransaction, isLoading: isDeleting } = useDeleteTransaction();
+  const handleDelete = () => {
+    if (!params.id) return;
+    const id = params.id;
+    Alert.alert("Supprimer la transaction ?", "Cette action est irréversible.", [
+      { text: "Annuler", style: "cancel" },
+      {
+        text: "Supprimer",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteTransaction(id);
+            refreshAccounts();
+            router.back();
+          } catch (e: any) {
+            Alert.alert("Erreur", e?.message ?? "Impossible de supprimer la transaction.");
+          }
+        },
+      },
+    ]);
+  };
+
   const handleSubmit = () => {
     if (!canSubmit) return;
     if (!balanceWarning) return void save();
@@ -663,6 +686,17 @@ export default function AddTransaction() {
             icon={<IconSymbol name="checkmark.circle.fill" size={20} color="#fff" />}
             style={{ backgroundColor: accentColor, marginTop: 4 }}
           />
+
+          {isEditing && (
+            <Button
+              label="Supprimer la transaction"
+              variant="secondary"
+              onPress={handleDelete}
+              loading={isDeleting}
+              icon={<Ionicons name="trash-outline" size={18} color={c.danger} />}
+              textStyle={{ color: c.danger }}
+            />
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </>
