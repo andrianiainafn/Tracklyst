@@ -36,7 +36,11 @@ import { useColorScheme } from "@/src/hooks/use-color-scheme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Raccourcis : un tap remplit le nom.
+// Paiements hebdomadaires proposés avec la bonne fréquence et catégorie.
+const WEEKLY_SUGGESTIONS = new Set(["Cotisation familiale"]);
+
 const SUGGESTIONS = [
+  "Cotisation familiale",
   "Netflix",
   "Spotify",
   "Internet",
@@ -48,9 +52,9 @@ const SUGGESTIONS = [
 ];
 
 const FREQUENCIES: { id: SubscriptionFrequency; label: string }[] = [
-  { id: "monthly", label: "Mensuel" },
-  { id: "yearly", label: "Annuel" },
-  { id: "weekly", label: "Hebdo" },
+  { id: "weekly", label: "Chaque semaine" },
+  { id: "monthly", label: "Chaque mois" },
+  { id: "yearly", label: "Chaque année" },
 ];
 
 const formatDate = (iso: string) =>
@@ -218,7 +222,7 @@ export default function AddSubscriptionScreen() {
         {/* Nom */}
         <Input
           label="Nom"
-          placeholder="Ex : Netflix, Internet, assurance…"
+          placeholder="Ex : Cotisation familiale, Internet, loyer…"
           value={name}
           onChangeText={setName}
           maxLength={60}
@@ -230,7 +234,14 @@ export default function AddSubscriptionScreen() {
               return (
                 <Pressable
                   key={s}
-                  onPress={() => setName(s)}
+                  onPress={() => {
+                    setName(s);
+                    if (WEEKLY_SUGGESTIONS.has(s)) {
+                      setFrequency("weekly");
+                      const cat = expenseCats.find((x) => x.name.toLowerCase() === s.toLowerCase());
+                      if (cat) setCategoryId(cat.id);
+                    }
+                  }}
                   style={[
                     styles.chip,
                     { backgroundColor: selected ? c.tintMuted : c.surface, borderColor: selected ? c.tint : c.border },

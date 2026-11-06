@@ -61,10 +61,10 @@ export function SubscriptionsCard({
       >
         <CategoryIcon icon="autorenew" color="#8B5CF6" size={40} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.summaryTitle, { color: c.text }]}>Abonnements</Text>
+          <Text style={[styles.summaryTitle, { color: c.text }]}>Paiements réguliers</Text>
           <Text style={[styles.summaryMeta, { color: c.textMuted }]}>
             {activeCount === 0
-              ? "Ajoutez Netflix, Internet, téléphone…"
+              ? "Ajoutez cotisation familiale, loyer, internet…"
               : `${activeCount} actif${activeCount > 1 ? "s" : ""} · ${formatCurrency(Math.round(monthlyTotal), currency)} / mois`}
           </Text>
         </View>

@@ -12,7 +12,7 @@ export type QuickAction = "expense" | "income" | "budget" | "goal" | "subscripti
 const SECONDARY: { id: QuickAction; icon: IconName; tint: string; label: string; detail: string }[] = [
   { id: "budget", icon: "wallet-plus-outline", tint: "#0EA5E9", label: "Nouveau budget", detail: "Séparer foyer, épargne, projet…" },
   { id: "goal", icon: "flag-plus-outline", tint: "#10B981", label: "Nouvel objectif", detail: "Terrain, moto, fonds d'urgence…" },
-  { id: "subscription", icon: "autorenew", tint: "#8B5CF6", label: "Abonnement", detail: "Loyer, internet, électricité…" },
+  { id: "subscription", icon: "autorenew", tint: "#8B5CF6", label: "Paiement régulier", detail: "Cotisation de la semaine, loyer, internet…" },
 ];
 
 /**

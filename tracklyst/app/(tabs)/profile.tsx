@@ -134,7 +134,7 @@ export default function ProfileScreen() {
   const stats = [
     { label: "Budgets", value: budgets.length },
     { label: "Objectifs", value: goals.filter((g) => g.status !== "cancelled").length },
-    { label: "Abonnements", value: subscriptions.length },
+    { label: "Paiements", value: subscriptions.length },
   ];
 
   return (
@@ -217,7 +217,7 @@ export default function ProfileScreen() {
           <MenuRow
             icon="autorenew"
             tint="#8B5CF6"
-            label="Abonnements"
+            label="Paiements réguliers"
             detail={
               due.length > 0
                 ? `${due.length} prélèvement${due.length > 1 ? "s" : ""} à valider`

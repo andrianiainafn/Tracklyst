@@ -65,11 +65,11 @@ export default function ModalLayout() {
       />
       <Stack.Screen
         name="subscriptions"
-        options={{ ...commonOptions, title: "Abonnements" }}
+        options={{ ...commonOptions, title: "Paiements réguliers" }}
       />
       <Stack.Screen
         name="add-subscription"
-        options={{ ...commonOptions, title: "Abonnement" }}
+        options={{ ...commonOptions, title: "Paiement régulier" }}
       />
       <Stack.Screen
         name="categories"

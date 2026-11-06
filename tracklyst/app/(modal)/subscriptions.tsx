@@ -153,7 +153,7 @@ export default function SubscriptionsScreen() {
         {!isLoading && subscriptions.length === 0 && (
           <EmptyState
             icon="repeat-outline"
-            title="Aucun abonnement"
+            title="Aucun paiement régulier"
             subtitle="Ajoutez vos dépenses qui reviennent chaque mois : on vous rappellera de les valider le jour J."
           />
         )}
@@ -161,7 +161,7 @@ export default function SubscriptionsScreen() {
 
       <View style={[styles.footer, { paddingBottom: bottom + 12, backgroundColor: c.bg }]}>
         <Button
-          label="Ajouter un abonnement"
+          label="Ajouter un paiement régulier"
           icon={<Ionicons name="add" size={18} color="#fff" />}
           onPress={() => router.push("/(modal)/add-subscription")}
         />
