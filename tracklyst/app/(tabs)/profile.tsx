@@ -207,9 +207,17 @@ export default function ProfileScreen() {
             c={c}
           />
           <MenuRow
+            icon="calculator-variant-outline"
+            tint="#10B981"
+            label="Plan du salaire"
+            detail="Salaire − plafonds = reste, réparti sur les objectifs"
+            onPress={() => router.push("/(modal)/salary-plan" as any)}
+            c={c}
+          />
+          <MenuRow
             icon="speedometer"
             tint="#0EA5E9"
-            label="Plafonds du mois"
+            label="Plafonds"
             detail={activeBudget ? activeBudget.name : undefined}
             onPress={() => router.push("/(modal)/monthly-limits" as any)}
             c={c}

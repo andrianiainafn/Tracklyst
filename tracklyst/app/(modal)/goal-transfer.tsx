@@ -37,7 +37,7 @@ export default function GoalTransferModal() {
   const c = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
   const { bottom } = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ goalId?: string }>();
+  const params = useLocalSearchParams<{ goalId?: string; amount?: string }>();
   const goalId = params.goalId as string | undefined;
 
   const { activeBudget, balance } = useActiveBudget();
@@ -60,7 +60,8 @@ export default function GoalTransferModal() {
   const goalTransactions = useGoalStore((st) => st.goalTransactions).filter((t) => t.goal_id === goalId);
 
   const [mode, setMode] = useState<Mode>("deposit");
-  const [amountRaw, setAmountRaw] = useState("");
+  // Montant proposé par le plan du salaire.
+  const [amountRaw, setAmountRaw] = useState(params.amount ?? "");
   const [description, setDescription] = useState("");
 
   const amount = parseFloat(amountRaw.replace(",", ".")) || 0;

@@ -64,6 +64,10 @@ export default function ModalLayout() {
         options={{ ...commonOptions, title: "Plafonds" }}
       />
       <Stack.Screen
+        name="salary-plan"
+        options={{ ...commonOptions, title: "Plan du salaire" }}
+      />
+      <Stack.Screen
         name="subscriptions"
         options={{ ...commonOptions, title: "Paiements réguliers" }}
       />

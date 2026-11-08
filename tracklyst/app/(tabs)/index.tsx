@@ -85,6 +85,9 @@ export default function HomeScreen() {
       case "subscription":
         router.push("/(modal)/add-subscription" as any);
         break;
+      case "plan":
+        router.push("/(modal)/salary-plan" as any);
+        break;
     }
   };
   const { hidden, toggle: toggleHidden } = usePrivacyStore();
