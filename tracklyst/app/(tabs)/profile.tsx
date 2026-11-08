@@ -210,7 +210,7 @@ export default function ProfileScreen() {
             icon="calculator-variant-outline"
             tint="#10B981"
             label="Plan du salaire"
-            detail="Salaire − plafonds = reste, réparti sur les objectifs"
+            detail="Mon salaire − mes dépenses prévues = ce qui reste"
             onPress={() => router.push("/(modal)/salary-plan" as any)}
             c={c}
           />

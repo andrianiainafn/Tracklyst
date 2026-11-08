@@ -10,7 +10,7 @@ type IconName = ComponentProps<typeof MaterialCommunityIcons>["name"];
 export type QuickAction = "expense" | "income" | "budget" | "goal" | "subscription" | "plan";
 
 const SECONDARY: { id: QuickAction; icon: IconName; tint: string; label: string; detail: string }[] = [
-  { id: "plan", icon: "calculator-variant-outline", tint: "#10B981", label: "Plan du salaire", detail: "Ce qui reste après les plafonds, réparti sur les objectifs" },
+  { id: "plan", icon: "calculator-variant-outline", tint: "#10B981", label: "Plan du salaire", detail: "Combien il me reste après les dépenses" },
   { id: "budget", icon: "wallet-plus-outline", tint: "#0EA5E9", label: "Nouveau budget", detail: "Séparer foyer, épargne, projet…" },
   { id: "goal", icon: "flag-plus-outline", tint: "#10B981", label: "Nouvel objectif", detail: "Terrain, moto, fonds d'urgence…" },
   { id: "subscription", icon: "autorenew", tint: "#8B5CF6", label: "Paiement régulier", detail: "Cotisation de la semaine, loyer, internet…" },
