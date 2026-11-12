@@ -5,16 +5,19 @@
 export function pickDateOnWeb({
   value,
   min,
+  max,
   onPick,
 }: {
   value: string; // "YYYY-MM-DD"
   min?: string;
+  max?: string;
   onPick: (iso: string) => void;
 }) {
   const input = document.createElement("input");
   input.type = "date";
   input.value = value;
   if (min) input.min = min;
+  if (max) input.max = max;
   Object.assign(input.style, { position: "fixed", opacity: "0", pointerEvents: "none", left: "50%", top: "50%" });
   document.body.appendChild(input);
   const cleanup = () => setTimeout(() => input.remove(), 0);

@@ -24,6 +24,8 @@ import { useUpdateTransaction } from "@/src/features/transaction/hooks/useUpdate
 import { useDeleteTransaction } from "@/src/features/transaction/hooks/useDeleteTransaction";
 import { formatAmount, formatCurrency, getCurrencySymbol } from "@/src/utils/currency";
 import { todayISO } from "@/src/utils/date";
+import { pickDateOnWeb } from "@/src/utils/webDatePicker";
+import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import React, {
@@ -164,6 +166,16 @@ function BudgetSelector({
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
+const toISO = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const shiftISO = (iso: string, days: number) => {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return toISO(d);
+};
+const longDate = (iso: string) =>
+  new Date(`${iso}T00:00:00`).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+
 export default function AddTransaction() {
   const isDark = useColorScheme() === "dark";
   const c = isDark ? Colors.dark : Colors.light;
@@ -224,7 +236,26 @@ export default function AddTransaction() {
   );
   const [newCategoryName, setNewCategoryName] = useState("");
   const [description, setDescription] = useState(params.description ?? "");
-  const [date] = useState(params.date ?? todayISO());
+  // Date de l'opération : aujourd'hui par défaut, modifiable (dépense oubliée hier…).
+  const [date, setDate] = useState(params.date ?? todayISO());
+  const [showIosDate, setShowIosDate] = useState(false);
+  const today = todayISO();
+  const yesterday = shiftISO(today, -1);
+  const pickDate = () => {
+    if (Platform.OS === "web") return pickDateOnWeb({ value: date, max: today, onPick: setDate });
+    if (Platform.OS === "android") {
+      DateTimePickerAndroid.open({
+        value: new Date(`${date}T00:00:00`),
+        mode: "date",
+        maximumDate: new Date(),
+        onChange: (_e, selected) => {
+          if (selected) setDate(toISO(selected));
+        },
+      });
+      return;
+    }
+    setShowIosDate((v) => !v);
+  };
   const [selectedBalance, setSelectedBalance] = useState<BudgetBalance | null>(
     null,
   );
@@ -492,6 +523,65 @@ export default function AddTransaction() {
             </View>
           )}
 
+          {/* ── Date ── */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: c.textMuted }]}>Date</Text>
+            <View style={styles.dateRow}>
+              {(
+                [
+                  { id: today, label: "Aujourd'hui" },
+                  { id: yesterday, label: "Hier" },
+                ] as const
+              ).map((d) => {
+                const on = date === d.id;
+                return (
+                  <Pressable
+                    key={d.label}
+                    onPress={() => {
+                      setDate(d.id);
+                      setShowIosDate(false);
+                    }}
+                    style={[
+                      styles.dateChip,
+                      { backgroundColor: on ? accentLight : c.surface, borderColor: on ? accentColor : c.border },
+                    ]}
+                  >
+                    <Text style={[styles.dateChipText, { color: on ? accentColor : c.textMuted }]}>{d.label}</Text>
+                  </Pressable>
+                );
+              })}
+              {(() => {
+                const other = date !== today && date !== yesterday;
+                return (
+                  <Pressable
+                    onPress={pickDate}
+                    style={[
+                      styles.dateChip,
+                      { backgroundColor: other ? accentLight : c.surface, borderColor: other ? accentColor : c.border },
+                    ]}
+                  >
+                    <Ionicons name="calendar-outline" size={15} color={other ? accentColor : c.textMuted} />
+                    <Text style={[styles.dateChipText, { color: other ? accentColor : c.textMuted }]}>
+                      {other ? longDate(date) : "Autre date"}
+                    </Text>
+                  </Pressable>
+                );
+              })()}
+            </View>
+            {showIosDate && Platform.OS === "ios" && (
+              <DateTimePicker
+                value={new Date(`${date}T00:00:00`)}
+                mode="date"
+                display="inline"
+                maximumDate={new Date()}
+                themeVariant={isDark ? "dark" : "light"}
+                onChange={(_e, selected) => {
+                  if (selected) setDate(toISO(selected));
+                }}
+              />
+            )}
+          </View>
+
           {/* ── Compte ── */}
           {activeAccounts.length > 0 && selectedBudget && (
             <View style={styles.section}>
@@ -645,22 +735,6 @@ export default function AddTransaction() {
             returnKeyType="done"
           />
 
-          {/* ── 6. Date ── */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: c.textMuted }]}>Date</Text>
-            <View style={[styles.dateRow, { backgroundColor: c.surface, borderColor: c.border }]}>
-              <IconSymbol name="calendar" size={16} color={accentColor} />
-              <Text style={[styles.dateText, { color: c.text }]}>
-                {new Date(date + "T00:00:00").toLocaleDateString("fr-FR", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </Text>
-            </View>
-          </View>
-
           {error && (
             <View style={[styles.errorBox, { backgroundColor: isDark ? "#451A03" : "#FEF3C7" }]}>
               <IconSymbol name="exclamationmark.triangle.fill" size={14} color={isDark ? "#F59E0B" : "#B45309"} />
@@ -708,6 +782,17 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   scroll: { paddingHorizontal: 20, paddingTop: 20, gap: 20 },
 
+  dateRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  dateChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: Radius.pill,
+    borderWidth: 1.5,
+  },
+  dateChipText: { fontSize: 13, fontWeight: "700" },
   typeToggle: { flexDirection: "row", borderRadius: Radius.lg, padding: 4, gap: 4 },
   typeBtn: {
     flex: 1,
@@ -797,16 +882,6 @@ const styles = StyleSheet.create({
   newCatRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2 },
   newCatBtn: { width: 50, height: 50, borderRadius: Radius.md, alignItems: "center", justifyContent: "center" },
 
-  dateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    borderRadius: Radius.md,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-  },
-  dateText: { fontSize: 14, fontWeight: "500", textTransform: "capitalize", flex: 1 },
 
   errorBox: { flexDirection: "row", alignItems: "center", gap: 8, borderRadius: Radius.md, padding: 12 },
   errorText: { fontSize: 13, flex: 1 },
