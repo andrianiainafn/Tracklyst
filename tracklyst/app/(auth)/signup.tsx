@@ -5,7 +5,7 @@ import { useSignup } from "@/src/features/auth/hooks/useSignup";
 import { Feather, FontAwesome } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   KeyboardAvoidingView,
@@ -68,33 +68,11 @@ export default function SignupScreen() {
 
   const strength = getPasswordStrength(password, c);
 
-  if (emailConfirmationRequired) {
-    return (
-      <View style={[styles.centeredScreen, { backgroundColor: c.bg }]}>
-        <StatusBar style={isDark ? "light" : "dark"} />
-        <View style={styles.centeredContent}>
-          <View style={[styles.iconCircle, { backgroundColor: c.tintMuted }]}>
-            <Feather name="send" size={30} color={c.tint} />
-          </View>
-          <Text style={[styles.centeredTitle, { color: c.text }]}>
-            Confirmez votre email
-          </Text>
-          <Text style={[styles.centeredSubtitle, { color: c.textMuted }]}>
-            Un email de confirmation a été envoyé à{"\n"}
-            <Text style={{ color: c.tint, fontWeight: "600" }}>{email}</Text>
-          </Text>
-          <Text style={[styles.centeredHint, { color: c.textSubtle }]}>
-            Cliquez sur le lien pour activer votre compte.
-          </Text>
-          <Button
-            label="Aller à la connexion"
-            onPress={() => router.replace("/login")}
-            style={{ marginTop: 8, alignSelf: "stretch" }}
-          />
-        </View>
-      </View>
-    );
-  }
+  // Inscription faite, email à confirmer : écran du code.
+  useEffect(() => {
+    if (emailConfirmationRequired)
+      router.replace({ pathname: "/(auth)/verify-email", params: { email: email.trim().toLowerCase() } } as any);
+  }, [emailConfirmationRequired]);
 
   return (
     <KeyboardAvoidingView

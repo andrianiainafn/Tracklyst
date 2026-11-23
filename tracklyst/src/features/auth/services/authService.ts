@@ -126,6 +126,29 @@ export const authService = {
   },
 
   /**
+   * Confirme l'inscription avec le code reçu par email (plus fiable que le
+   * lien, que certaines applis mail abîment).
+   */
+  async verifySignupCode(email: string, code: string): Promise<Session | null> {
+    const params = { email: email.trim().toLowerCase(), token: code.trim() };
+    let { data, error } = await supabase.auth.verifyOtp({ ...params, type: "signup" });
+    // Code envoyé par « Renvoyer » ou par un lien magique : type « email ».
+    if (error) ({ data, error } = await supabase.auth.verifyOtp({ ...params, type: "email" }));
+    if (error) throw error;
+    return data.session;
+  },
+
+  /** Renvoie l'email de confirmation (lien + code). */
+  async resendSignup(email: string): Promise<void> {
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: email.trim().toLowerCase(),
+      options: { emailRedirectTo: redirectTo },
+    });
+    if (error) throw error;
+  },
+
+  /**
    * Send password reset email
    */
   async resetPassword(email: string): Promise<void> {

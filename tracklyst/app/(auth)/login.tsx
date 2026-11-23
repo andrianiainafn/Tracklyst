@@ -2,6 +2,8 @@ import { Colors, Radius, Shadow } from "@/constants/theme";
 import { Button } from "@/src/components/ui/Button";
 import { Input } from "@/src/components/ui/Input";
 import { useLogin } from "@/src/features/auth/hooks/useLogin";
+import { authService } from "@/src/features/auth/services/authService";
+import { useAuthStore } from "@/src/features/auth/store/authStore";
 import { Feather, FontAwesome } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -44,7 +46,21 @@ export default function LoginScreen() {
 
   const handlePasswordLogin = async () => {
     const success = await loginWithPassword(email, password);
-    if (success) router.replace("/(tabs)");
+    if (success) return router.replace("/(tabs)");
+    // Compte créé mais email pas encore confirmé : nouveau code et écran de saisie.
+    const message = useAuthStore.getState().error ?? "";
+    if (/not confirmed/i.test(message)) {
+      const address = email.trim().toLowerCase();
+      let resent = false;
+      try {
+        await authService.resendSignup(address);
+        resent = true;
+      } catch {
+        // déjà envoyé récemment : le dernier code reste valable
+      }
+      clearError();
+      router.push({ pathname: "/(auth)/verify-email", params: { email: address, ...(resent ? { resent: "1" } : {}) } } as any);
+    }
   };
 
   const handleMagicLink = async () => {
