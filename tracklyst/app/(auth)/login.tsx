@@ -33,7 +33,6 @@ export default function LoginScreen() {
     loginWithOAuth,
     sendMagicLink,
     resetPassword,
-    magicLinkSent,
     isLoading,
     error,
     clearError,
@@ -63,8 +62,14 @@ export default function LoginScreen() {
     }
   };
 
+  // Connexion sans mot de passe : email avec un code (et un lien), saisi à l'écran suivant.
   const handleMagicLink = async () => {
-    await sendMagicLink(email);
+    const ok = await sendMagicLink(email);
+    if (ok)
+      router.push({
+        pathname: "/(auth)/verify-email",
+        params: { email: email.trim().toLowerCase(), mode: "login", resent: "1" },
+      } as any);
   };
 
   const handleForgotPassword = async () => {
@@ -93,30 +98,6 @@ export default function LoginScreen() {
     const success = await loginWithOAuth("google");
     if (success) router.replace("/(tabs)");
   };
-
-  if (magicLinkSent) {
-    return (
-      <View style={[styles.centeredScreen, { backgroundColor: c.bg }]}>
-        <StatusBar style={isDark ? "light" : "dark"} />
-        <View style={styles.centeredContent}>
-          <View style={[styles.iconCircle, { backgroundColor: c.tintMuted }]}>
-            <Feather name="mail" size={32} color={c.tint} />
-          </View>
-          <Text style={[styles.centeredTitle, { color: c.text }]}>
-            Vérifiez votre boîte mail
-          </Text>
-          <Text style={[styles.centeredSubtitle, { color: c.textMuted }]}>
-            Nous avons envoyé un lien de connexion à{"\n"}
-            <Text style={{ color: c.tint, fontWeight: "600" }}>{email}</Text>
-          </Text>
-          <TouchableOpacity style={styles.ghostButton} onPress={() => router.back()}>
-            <Feather name="arrow-left" size={16} color={c.tint} />
-            <Text style={[styles.ghostButtonText, { color: c.tint }]}>Retour</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <KeyboardAvoidingView
@@ -169,7 +150,7 @@ export default function LoginScreen() {
                       active && { fontWeight: "700" },
                     ]}
                   >
-                    {mode === "password" ? "Mot de passe" : "Lien magique"}
+                    {mode === "password" ? "Mot de passe" : "Code par email"}
                   </Text>
                 </TouchableOpacity>
               );

@@ -15,7 +15,9 @@ import {
   setEnabled as setNotificationsEnabled,
 } from "@/src/features/notifications/services/localNotifications";
 import React, { useEffect, useState } from "react";
-import { Alert, Linking, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Input } from "@/src/components/ui/Input";
+import { getErrorMessage } from "@/src/utils/errors";
 import { useColorScheme } from "@/src/hooks/use-color-scheme";
 
 export default function Settings() {
@@ -24,6 +26,33 @@ export default function Settings() {
   const { user } = useAuth();
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
+  // Mot de passe : utile aussi pour un compte créé sans (connexion par code).
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
+  const pwError =
+    pw.length > 0 && pw.length < 8
+      ? "8 caractères minimum."
+      : pw2.length > 0 && pw2 !== pw
+        ? "Les deux mots de passe ne correspondent pas."
+        : null;
+  const canSavePw = pw.length >= 8 && pw === pw2 && !pwSaving;
+  const savePassword = async () => {
+    if (!canSavePw) return;
+    setPwSaving(true);
+    try {
+      await authService.setPassword(pw);
+      setPw("");
+      setPw2("");
+      setPwOpen(false);
+      Alert.alert("Mot de passe enregistré", "Vous pouvez maintenant vous connecter avec votre email et ce mot de passe.");
+    } catch (err) {
+      Alert.alert("Mot de passe", getErrorMessage(err, "Enregistrement impossible."));
+    } finally {
+      setPwSaving(false);
+    }
+  };
   const [remindersOn, setRemindersOn] = useState(true);
 
   useEffect(() => {
@@ -148,6 +177,26 @@ export default function Settings() {
             <Text style={[styles.rowSubtitle, { color: c.textMuted }]}>{email}</Text>
           </View>
         </View>
+      </Card>
+      <Card style={{ marginTop: 10, gap: 10 }}>
+        <Pressable onPress={() => setPwOpen((o) => !o)} style={styles.row}>
+          <View style={[styles.iconWrap, { backgroundColor: c.tintMuted }]}>
+            <MaterialCommunityIcons name="lock-outline" size={17} color={c.tint} />
+          </View>
+          <View style={styles.rowText}>
+            <Text style={[styles.rowTitle, { color: c.text }]}>Mot de passe</Text>
+            <Text style={[styles.rowSubtitle, { color: c.textMuted }]}>Définir ou changer le mot de passe de connexion</Text>
+          </View>
+          <MaterialCommunityIcons name={pwOpen ? "chevron-up" : "chevron-down"} size={20} color={c.textSubtle} />
+        </Pressable>
+        {pwOpen && (
+          <>
+            <Input label="Nouveau mot de passe" value={pw} onChangeText={setPw} secureTextEntry autoComplete="new-password" placeholder="8 caractères minimum" />
+            <Input label="Confirmer" value={pw2} onChangeText={setPw2} secureTextEntry autoComplete="new-password" placeholder="Retapez le mot de passe" />
+            {pwError ? <Text style={{ color: c.danger, fontSize: 12 }}>{pwError}</Text> : null}
+            <Button label="Enregistrer le mot de passe" onPress={savePassword} disabled={!canSavePw} loading={pwSaving} />
+          </>
+        )}
       </Card>
 
       <Text style={[styles.sectionLabel, { color: c.textSubtle }]}>Session</Text>

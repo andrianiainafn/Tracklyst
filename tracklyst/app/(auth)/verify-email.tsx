@@ -21,7 +21,9 @@ export default function VerifyEmailScreen() {
   const isDark = useColorScheme() === "dark";
   const c = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
-  const { email = "", resent } = useLocalSearchParams<{ email?: string; resent?: string }>();
+  const { email = "", resent, mode } = useLocalSearchParams<{ email?: string; resent?: string; mode?: string }>();
+  // « login » : connexion sans mot de passe (code du lien magique).
+  const isLogin = mode === "login";
   const setSession = useAuthStore((s) => s.setSession);
 
   const [code, setCode] = useState("");
@@ -44,7 +46,7 @@ export default function VerifyEmailScreen() {
     setBusy(true);
     setError(null);
     try {
-      const session = await authService.verifySignupCode(email, digits);
+      const session = await authService.verifySignupCode(email, digits, isLogin);
       if (session) {
         setSession(session);
         router.replace("/(tabs)");
@@ -67,7 +69,8 @@ export default function VerifyEmailScreen() {
     if (wait > 0 || !email) return;
     setError(null);
     try {
-      await authService.resendSignup(email);
+      if (isLogin) await authService.sendMagicLink(email);
+      else await authService.resendSignup(email);
       setInfo("Nouvel email envoyé. Utilisez le code du dernier email reçu.");
       setWait(RESEND_DELAY);
     } catch (err) {
@@ -82,7 +85,7 @@ export default function VerifyEmailScreen() {
         <View style={[styles.iconCircle, { backgroundColor: c.tintMuted }]}>
           <Feather name="mail" size={30} color={c.tint} />
         </View>
-        <Text style={[styles.title, { color: c.text }]}>Confirmez votre email</Text>
+        <Text style={[styles.title, { color: c.text }]}>{isLogin ? "Code de connexion" : "Confirmez votre email"}</Text>
         <Text style={[styles.subtitle, { color: c.textMuted }]}>
           Saisissez le code reçu à{"\n"}
           <Text style={{ color: c.tint, fontWeight: "700" }}>{email}</Text>
