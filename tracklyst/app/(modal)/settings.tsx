@@ -5,7 +5,7 @@ import { IconSymbol } from "@/src/components/ui/icon-symbol";
 import { Button } from "@/src/components/ui/Button";
 import { Card, PressableCard } from "@/src/components/ui/Card";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { authService } from "@/src/features/auth/services/authService";
 import { useAuth } from "@/src/features/auth/hooks/useAuth";
 import { useAuthStore } from "@/src/features/auth/store/authStore";
@@ -27,7 +27,8 @@ export default function Settings() {
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
   // Mot de passe : utile aussi pour un compte créé sans (connexion par code).
-  const [pwOpen, setPwOpen] = useState(false);
+  const { password: askPassword } = useLocalSearchParams<{ password?: string }>();
+  const [pwOpen, setPwOpen] = useState(askPassword === "1");
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
@@ -191,6 +192,11 @@ export default function Settings() {
         </Pressable>
         {pwOpen && (
           <>
+            {askPassword === "1" && (
+              <Text style={{ color: c.tint, fontSize: 13, fontWeight: "600" }}>
+                Choisissez votre nouveau mot de passe ci-dessous.
+              </Text>
+            )}
             <Input label="Nouveau mot de passe" value={pw} onChangeText={setPw} secureTextEntry autoComplete="new-password" placeholder="8 caractères minimum" />
             <Input label="Confirmer" value={pw2} onChangeText={setPw2} secureTextEntry autoComplete="new-password" placeholder="Retapez le mot de passe" />
             {pwError ? <Text style={{ color: c.danger, fontSize: 12 }}>{pwError}</Text> : null}

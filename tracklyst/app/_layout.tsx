@@ -23,9 +23,12 @@ if (Platform.OS === "web") installWebAlert();
 import "react-native-reanimated";
 import "react-native-url-polyfill/auto";
 
+import { openedFromRecoveryLink } from "@/src/lib/supabase";
 export const unstable_settings = {
   anchor: "(tabs)",
 };
+
+let recoveryHandled = false;
 
 function AuthGuard() {
   const { isAuthenticated, isInitialized } = useAuth();
@@ -42,6 +45,10 @@ function AuthGuard() {
       router.replace("/(auth)/login");
     } else if (isAuthenticated && inAuthGroup) {
       router.replace("/(tabs)");
+    } else if (isAuthenticated && openedFromRecoveryLink && !recoveryHandled) {
+      // Lien de réinitialisation : choix du nouveau mot de passe.
+      recoveryHandled = true;
+      router.push({ pathname: "/(modal)/settings", params: { password: "1" } } as any);
     }
   }, [isAuthenticated, isInitialized, segments]);
 
